@@ -12,8 +12,8 @@ class PFKernel:
 			subindex = torch.stack(tuple(subindex)).t() # submatrix index I in paper
 			n = subindex.shape[0]
 			self.subindex_row = subindex.unsqueeze(1).repeat(1, n, 1).view(n*n, -1) # row selector
-			subindex_col = subindex.unsqueeze(1).repeat(n, 1, 1).view(n*n, -1) 
-			self.subindex_col = subindex_col.t().repeat(m, 1, 1).permute(2, 0, 1) # column selector different due to Torch API
+			self.subindex_col = subindex.unsqueeze(1).repeat(n, 1, 1).view(n*n, -1) 
+			self.subindex_col = self.subindex_col.t().repeat(m, 1, 1).permute(2, 0, 1) # column selector different due to Torch API
 
 	def __call__(self, P1: torch.Tensor, P2: torch.Tensor, T: int, normalize=False):
 		# P1, P2 must be square and same shape
@@ -27,3 +27,12 @@ class PFKernel:
 			submatrices = torch.gather(sum_powers[self.subindex_row], 2, self.subindex_col) 
 			result = submatrices.det().sum()
 			return result
+
+	@staticmethod
+	def validate(P: torch.Tensor):
+		# Kernel only valid for operators with eigenvalues on unit circle.
+		with torch.no_grad():
+			(eig, _) = torch.eig(P)
+			re, im = eig[:, 0], eig[:, 1]
+			norm = torch.sqrt(re.pow(2) + im.pow(2))
+			return (norm <= 1.0).all().item()
