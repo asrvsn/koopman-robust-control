@@ -9,7 +9,12 @@ d, m, T = 50, 2, 5
 ker = PFKernel(device, d, m)
 
 if __name__ == '__main__':
-	for i in range(10):
-		A = torch.randn(d, d, device=device)
-		x = ker(A, A, T, normalize=True)
-		print(x.item())
+	print('Zero test')
+	A = torch.randn(d, d, device=device)
+	x = ker(A, A, T, normalize=True)
+	print('K(A, A) = ', x.item())
+
+	print('Nonzero test')
+	A, B = torch.randn(d, d, device=device), torch.randn(d, d, device=device)
+	x = ker(A, B, T, normalize=True)
+	print('K(A, B) = ', x.item())
