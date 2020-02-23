@@ -15,12 +15,15 @@ class PFKernel:
 			subindex_col = subindex.unsqueeze(1).repeat(n, 1, 1).view(n*n, -1) 
 			self.subindex_col = subindex_col.t().repeat(m, 1, 1).permute(2, 0, 1) # column selector different due to Torch API
 
-	def __call__(self, P1: torch.Tensor, P2: torch.Tensor, T: int):
+	def __call__(self, P1: torch.Tensor, P2: torch.Tensor, T: int, normalize=False):
 		# P1, P2 must be square and same shape
 		# assert P1.shape == (self.d, self.d) and P2.shape == P1.shape
-		sum_powers = torch.eye(self.d, device=self.device)
-		for _ in range(1, T):
-			sum_powers += torch.mm(torch.mm(P1, sum_powers), P2.t())
-		submatrices = torch.gather(sum_powers[self.subindex_row], 2, self.subindex_col) 
-		result = submatrices.det().sum()
-		return result
+		if normalize:
+			return torch.sqrt(1 - self.__call__(P1, P2, T).pow(2) / (self.__call__(P1, P1, T) * self.__call__(P2, P2, T)))
+		else:
+			sum_powers = torch.eye(self.d, device=self.device)
+			for _ in range(1, T):
+				sum_powers += torch.mm(torch.mm(P1, sum_powers), P2.t())
+			submatrices = torch.gather(sum_powers[self.subindex_row], 2, self.subindex_col) 
+			result = submatrices.det().sum()
+			return result
