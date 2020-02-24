@@ -2,6 +2,11 @@ import torch
 
 class PFKernel:
 	def __init__(self, device: torch.device, d: int, m: int):
+		'''
+		TODOs: 
+		* allocate less memory
+		* possibly use torch.cartesian_product instead of repeat & meshgrid
+		'''
 		self.device = device
 		self.d = d
 		with torch.no_grad():
@@ -36,3 +41,31 @@ class PFKernel:
 			re, im = eig[:, 0], eig[:, 1]
 			norm = torch.sqrt(re.pow(2) + im.pow(2))
 			return (norm <= 1.0).all().item()
+
+'''
+Tests for P-F kernel
+'''
+if __name__ == '__main__':
+	device = 'cuda' if torch.cuda.is_available() else 'cpu'
+
+	# Initialize kernel
+	d, m, T = 10, 2, 10
+	K = PFKernel(device, d, m)
+
+	print('Zero test')
+	A = torch.randn(d, d, device=device)
+	x = K(A, A, T, normalize=True)
+	print('K(A, A) = ', x.item())
+
+	print('Nonzero test')
+	A, B = torch.randn(d, d, device=device), torch.randn(d, d, device=device)
+	x = K(A, B, T, normalize=True)
+	print('K(A, B) = ', x.item())
+
+	print('Operator validation')
+	A, B = torch.eye(d), torch.randn(d, d, device=device)
+	P = B.clamp(0)
+	P = (P.t() / P.sum(1)).t()
+	print('Identity operator is valid: ', PFKernel.validate(A))
+	print('Random operator is valid:', PFKernel.validate(B))
+	print('Stochastic operator is valid:', PFKernel.validate(P))
