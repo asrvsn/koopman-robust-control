@@ -1,7 +1,5 @@
 '''
 Features for extended DMD and kernel DMD.
-
-PyTorch adaptation of [d3s](https://github.com/sklus/d3s), Klus et al
 '''
 from typing import Callable
 from itertools import combinations
@@ -20,7 +18,7 @@ class Observable:
 class PolynomialObservable(Observable):
 	def __init__(self, p: int, d: int, k: int, seed=None):
 		# TODO: if k is too high, this procedure will loop forever
-		
+
 		assert p > 0 and k > 0
 		self.d = d # dimension of input
 		self.p = p # max degree of polynomial
