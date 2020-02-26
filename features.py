@@ -22,10 +22,12 @@ class PolynomialObservable(Observable):
 		self.p = p # degree of polynomial
 		self.k = 0 # dimension of observable basis
 		self.psi = []
-		channels = np.empty(p*d)
+		channels = np.full((p*d,), np.nan)
 		for i in range(d):
-			channels[i*p:i*(p+1)] = i
+			channels[i*p:(i+1)*p] = i
 		for combo in combinations(channels, p):
+		# TODO: fix this
+			# print(combo)
 			def f(X: torch.Tensor):
 				z = torch.ones((X.shape[1],))
 				for i in combo:
