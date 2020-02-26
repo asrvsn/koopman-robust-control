@@ -6,6 +6,7 @@ PyTorch adaptation of [d3s](https://github.com/sklus/d3s), Klus et al
 from typing import Callable
 from itertools import combinations
 import torch
+import random
 import numpy as np
 
 '''
@@ -17,28 +18,47 @@ class Observable:
 		pass
 
 class PolynomialObservable(Observable):
-	def __init__(self, p: int, d: int):
+	def __init__(self, p: int, d: int, k: int, seed=None):
+		# TODO: if k is too high, this procedure will loop forever
+		
+		assert p > 0 and k > 0
 		self.d = d # dimension of input
-		self.p = p # degree of polynomial
-		self.k = 0 # dimension of observable basis
-		self.psi = []
-		channels = np.full((p*d,), np.nan)
-		for i in range(d):
-			channels[i*p:(i+1)*p] = i
-		for combo in combinations(channels, p):
-		# TODO: fix this
-			# print(combo)
-			def f(X: torch.Tensor):
-				z = torch.ones((X.shape[1],))
-				for i in combo:
-					z *= X[int(i)]
-				return z
-			self.psi.append(f)
-			self.k += 1
+		self.p = p # max degree of polynomial
+		self.k = k # dimension of observable basis
+		self.psi = dict()
+
+		# use seed to deterministically obtain observables
+		if seed is not None:
+			random.seed(seed)
+			np.random.seed(seed)
+
+		terms = [None for _ in range(1, p+1)]
+		for i in range(1, p+1):
+			channels = np.full((i*d,), np.nan)
+			for j in range(d):
+				channels[j*i:(j+1)*i] = j
+			terms[i-1] = channels
+
+		while len(self.psi) < k:
+			deg = random.randint(1, p) # polynomial of random degree
+			nonzero_terms = np.random.choice(terms[deg-1], deg)
+			key = [0 for _ in range(d)] # exponents of terms
+			for term in nonzero_terms:
+				key[int(term)] += 1
+			key = tuple(key)
+			if key not in self.psi: # sample without replacement
+				# observable
+				def f(X: torch.Tensor):
+					z = torch.ones((X.shape[1],))
+					for (term, power) in enumerate(key):
+						if power > 0:
+							z *= torch.pow(X[term], power)
+					return z
+				self.psi[key] = f
 
 	def __call__(self, X: torch.Tensor):
 		Z = torch.empty((self.k, X.shape[1]), device=X.device)
-		for i, func in enumerate(self.psi):
+		for i, func in enumerate(self.psi.values()):
 			Z[i] = func(X)
 		return Z
 
@@ -84,5 +104,6 @@ def gramian(X: torch.Tensor, Y: torch.Tensor, k: Kernel):
 		return torch.mm(X.t(), Y)
 
 if __name__ == '__main__': 
-	# TODO tests
-	pass
+	p, d, k = 3, 5, 5
+	obs = PolynomialObservable(p, d, k)
+	print(obs.psi.keys())

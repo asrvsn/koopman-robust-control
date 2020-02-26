@@ -13,7 +13,7 @@ def dataset(mu: float, a=0, b=10):
 	return torch.from_numpy(X).float(), torch.from_numpy(Y).float()
 
 if __name__ == '__main__':
-	mu = 2
+	mu = 3
 	X, Y = dataset(mu)
 	print(X.shape, Y.shape)
 	plt.figure(figsize=(8,8))

@@ -11,21 +11,21 @@ device = 'cuda' if torch.cuda.is_available() else 'cpu'
 print('PF vs. Frobenius norm test - van der Pol')
 
 # Init features
-obs = PolynomialObservable(3, 2)
-# TODO: ensure observables properly normalized to prevent kernel blowup
+p, d, k = 3, 2, 5
+obs = PolynomialObservable(p, d, k)
 
 # Initialize kernel
-d, m, T = obs.k, 2, 3
-K = PFKernel(device, d, m)
+m, T = 2, 3
+K = PFKernel(device, k, m)
 
 mu_0 = 0
 X, Y = vdp.dataset(mu_0)
 P_0, _ = edmd(X, Y, obs)
 P_0 = P_0.to(device)
 
-n = 5
-results = np.empty((n, 2))
-mu_rng = np.linspace(0, 2, n) + mu_0
+n = 30
+results = np.full((n, 2), np.nan)
+mu_rng = np.linspace(0, 3, n) + mu_0
 
 for i, mu in enumerate(mu_rng):
 	X, Y = vdp.dataset(mu)
