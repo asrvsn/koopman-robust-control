@@ -49,7 +49,7 @@ if __name__ == '__main__':
 	device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
 	# Initialize kernel
-	d, m, T = 10, 2, 10
+	d, m, T = 20, 2, 3
 	K = PFKernel(device, d, m)
 
 	print('Zero test')

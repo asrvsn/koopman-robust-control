@@ -4,7 +4,9 @@ Features for extended DMD and kernel DMD.
 PyTorch adaptation of [d3s](https://github.com/sklus/d3s), Klus et al
 '''
 from typing import Callable
+from itertools import combinations
 import torch
+import numpy as np
 
 '''
 Observables
@@ -14,12 +16,29 @@ class Observable:
 	def __init__(self):
 		pass
 
-class MonomialObservable(Observable):
-	def __init__(self, p: int):
-		self.p = p
+class PolynomialObservable(Observable):
+	def __init__(self, p: int, d: int):
+		self.d = d # dimension of input
+		self.p = p # degree of polynomial
+		self.k = 0 # dimension of observable basis
+		self.psi = []
+		channels = np.empty(p*d)
+		for i in range(d):
+			channels[i*p:i*(p+1)] = i
+		for combo in combinations(channels, p):
+			def f(X: torch.Tensor):
+				z = torch.ones((X.shape[1],))
+				for i in combo:
+					z *= X[int(i)]
+				return z
+			self.psi.append(f)
+			self.k += 1
+
 	def __call__(self, X: torch.Tensor):
-		# TODO
-		pass
+		Z = torch.empty((self.k, X.shape[1]), device=X.device)
+		for i, func in enumerate(self.psi):
+			Z[i] = func(X)
+		return Z
 
 class GaussianObservable(Observable):
 	def __init__(self, sigma: float):
