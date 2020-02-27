@@ -16,7 +16,7 @@ def edmd(X: torch.Tensor, Y: torch.Tensor, psi: Observable, operator='K'):
 	C_XY = torch.mm(PsiX, PsiY.t())
 	if operator == 'P': C_YX = C_XY.t()
 	P = torch.mm(torch.pinverse(C_XX), C_XY)
-	return P
+	return P.t()
 
 def kdmd(X: torch.Tensor, Y: torch.Tensor, k: Kernel, epsilon=0, operator='K'):
 	n, device = X.shape[0], X.device
