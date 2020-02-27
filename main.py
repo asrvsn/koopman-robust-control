@@ -15,11 +15,11 @@ p, d, k = 10, 2, 20
 obs = PolynomialObservable(p, d, k, seed=9001)
 
 # Initialize kernel
-m, T = 2, 10
+m, T = 2, 8
 K = PFKernel(device, k, m)
 
 mu_0 = 0
-X, Y = vdp.dataset(mu_0, b=15, n=5000)
+X, Y = vdp.dataset(mu_0)
 P_0 = edmd(X, Y, obs)
 P_0 = P_0.to(device)
 
@@ -39,6 +39,7 @@ print(results)
 
 plt.figure()
 plt.title('Kernel distance vs. mu')
+plt.yscale('log')
 plt.plot(mu_rng, results[:, 0])
 plt.figure()
 plt.title('Frobenius distance vs. mu')

@@ -69,7 +69,7 @@ def dataset(nt=1200):
 
 if __name__ == '__main__':
 	# Simulate 
-	nt = 300
+	nt = 1200
 	data = dataset(nt=nt)
 
 	# Plot the initial condition

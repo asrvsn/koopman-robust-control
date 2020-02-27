@@ -1,8 +1,6 @@
 '''
 Features for extended DMD and kernel DMD.
 '''
-from typing import Callable
-from itertools import combinations
 import torch
 import random
 import numpy as np
