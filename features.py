@@ -31,7 +31,7 @@ class PolynomialObservable(Observable):
 			random.seed(seed)
 			np.random.seed(seed)
 
-		# always add full state observable
+		# full state observable
 		for i in range(d):
 			key = [0 for _ in range(i)] + [1] + [0 for _ in range(i+1, d)]
 			key = tuple(key)
