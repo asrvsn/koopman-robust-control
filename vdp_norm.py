@@ -16,7 +16,7 @@ obs = PolynomialObservable(p, d, k, seed=9001)
 
 # Initialize kernel
 m, T = 2, 8
-K = PFKernel(device, k, m)
+K = PFKernel(device, k, m, T)
 
 mu_0 = 0
 X, Y = vdp.dataset(mu_0)
@@ -31,7 +31,7 @@ for i, mu in enumerate(mu_rng):
 	X, Y = vdp.dataset(mu)
 	P = edmd(X, Y, obs)
 	P = P.to(device)
-	d_pf = K(P_0, P, T, normalize=True)
+	d_pf = K(P_0, P, normalize=True)
 	d_fro = torch.norm(P - P_0)
 	results[i] = [d_pf.item(), d_fro.item()]
 

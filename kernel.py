@@ -1,7 +1,7 @@
 import torch
 
 class PFKernel:
-	def __init__(self, device: torch.device, d: int, m: int):
+	def __init__(self, device: torch.device, d: int, m: int, T: int):
 		'''
 		TODOs: 
 		* allocate less memory
@@ -9,6 +9,7 @@ class PFKernel:
 		'''
 		self.device = device
 		self.d = d
+		self.T = T
 		with torch.no_grad():
 			index = torch.arange(d, device=device).expand(m, -1)
 			product = torch.meshgrid(index.unbind())
@@ -20,15 +21,16 @@ class PFKernel:
 			self.subindex_col = subindex.unsqueeze(1).repeat(n, 1, 1).view(n*n, -1) 
 			self.subindex_col = self.subindex_col.t().repeat(m, 1, 1).permute(2, 0, 1) # column selector different due to Torch API
 
-	def __call__(self, P1: torch.Tensor, P2: torch.Tensor, T: int, normalize=False):
+	def __call__(self, P1: torch.Tensor, P2: torch.Tensor, normalize=False):
 		# P1, P2 must be square and same shape
 		# assert P1.shape == (self.d, self.d) and P2.shape == P1.shape
 		if normalize:
-			return torch.sqrt(1 - self.__call__(P1, P2, T).pow(2) / (self.__call__(P1, P1, T) * self.__call__(P2, P2, T)))
+			# TODO: fix nan here. div/0 is culprit
+			return torch.sqrt(1 - self.__call__(P1, P2).pow(2) / (self.__call__(P1, P1) * self.__call__(P2, P2)).clamp(min=1e-4))
 		else:
 			sum_powers = torch.eye(self.d, device=self.device)
-			for _ in range(1, T):
-				sum_powers += torch.mm(torch.mm(P1, sum_powers), P2.t())
+			for _ in range(1, self.T):
+				sum_powers = sum_powers + torch.mm(torch.mm(P1, sum_powers), P2.t())
 			submatrices = torch.gather(sum_powers[self.subindex_row], 2, self.subindex_col) 
 			result = submatrices.det().sum()
 			return result
@@ -50,16 +52,16 @@ if __name__ == '__main__':
 
 	# Initialize kernel
 	d, m, T = 20, 2, 3
-	K = PFKernel(device, d, m)
+	K = PFKernel(device, d, m, T)
 
 	print('Zero test')
 	A = torch.randn(d, d, device=device)
-	x = K(A, A, T, normalize=True)
+	x = K(A, A, normalize=True)
 	print('K(A, A) = ', x.item())
 
 	print('Nonzero test')
 	A, B = torch.randn(d, d, device=device), torch.randn(d, d, device=device)
-	x = K(A, B, T, normalize=True)
+	x = K(A, B, normalize=True)
 	print('K(A, B) = ', x.item())
 
 	print('Operator validation')

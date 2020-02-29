@@ -54,14 +54,15 @@ class PolynomialObservable(Observable):
 				self.psi[key] = None
 
 	def __call__(self, X: torch.Tensor):
-		Z = torch.empty((self.k, X.shape[1]), device=X.device)
-		for i, key in enumerate(self.psi.keys()):
-			z = torch.ones((X.shape[1],), device=X.device)
-			for term, power in enumerate(key):
-				if power > 0:
-					z *= torch.pow(X[term], power)
-			Z[i] = z
-		return Z
+		with torch.no_grad():
+			Z = torch.empty((self.k, X.shape[1]), device=X.device)
+			for i, key in enumerate(self.psi.keys()):
+				z = torch.ones((X.shape[1],), device=X.device)
+				for term, power in enumerate(key):
+					if power > 0:
+						z *= torch.pow(X[term], power)
+				Z[i] = z
+			return Z
 
 	def preimage(self, X: torch.Tensor): 
 		return X[:self.d]

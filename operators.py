@@ -10,22 +10,24 @@ import matplotlib.pyplot as plt
 from features import *
 
 def edmd(X: torch.Tensor, Y: torch.Tensor, psi: Observable, operator='K'):
-	PsiX = psi(X)
-	PsiY = psi(Y)
-	C_XX = torch.mm(PsiX, PsiX.t())
-	C_XY = torch.mm(PsiX, PsiY.t())
-	if operator == 'P': C_YX = C_XY.t()
-	P = torch.mm(torch.pinverse(C_XX), C_XY)
-	return P.t()
+	with torch.no_grad():
+		PsiX = psi(X)
+		PsiY = psi(Y)
+		C_XX = torch.mm(PsiX, PsiX.t())
+		C_XY = torch.mm(PsiX, PsiY.t())
+		if operator == 'P': C_YX = C_XY.t()
+		P = torch.mm(torch.pinverse(C_XX), C_XY)
+		return P.t()
 
 def kdmd(X: torch.Tensor, Y: torch.Tensor, k: Kernel, epsilon=0, operator='K'):
-	n, device = X.shape[0], X.device
-	G_XX = gramian(X, X, k)
-	G_XY = gramian(X, Y, k)
-	if operator == 'K':
-		G_XY = G_XY.t()
-	P = torch.mm(torch.pinverse(G_XX + epsilon*torch.eye(n, device=device)), G_XY)
-	return P
+	with torch.no_grad():
+		n, device = X.shape[0], X.device
+		G_XX = gramian(X, X, k)
+		G_XY = gramian(X, Y, k)
+		if operator == 'K':
+			G_XY = G_XY.t()
+		P = torch.mm(torch.pinverse(G_XX + epsilon*torch.eye(n, device=device)), G_XY)
+		return P
 
 if __name__ == '__main__':
 	import systems.vdp as vdp
