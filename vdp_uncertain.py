@@ -4,57 +4,53 @@ import matplotlib.pyplot as plt
 from features import *
 from kernel import *
 from operators import *
-from hmc import *
+from utils import set_seed
+import hmc as hmc
 import systems.vdp as vdp
 
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 torch.autograd.set_detect_anomaly(True)
 
+set_seed(9001)
+
 # Init features
-p, d, k = 10, 2, 20
-obs = PolynomialObservable(p, d, k, seed=9001)
+p, d, k = 3, 2, 8
+obs = PolynomialObservable(p, d, k)
 
 # Initialize kernel
 m, T = 2, 8
-K = PFKernel(device, k, m, T)
+K = PFKernel(device, k, m, T, use_sqrt=False)
 
 # Init data
-mu = 0
+mu = 1
 X, Y = vdp.dataset(mu)
 P0 = edmd(X, Y, obs)
 P0 = P0.to(device)
 
 # HMC
-def mk_log_prob(P0: torch.Tensor, K: PFKernel, rate=100.0):
-	rate = torch.Tensor([rate]).to(P0.device)
-	dist = torch.distributions.exponential.Exponential(rate)
-	def log_prob(P1: torch.Tensor):
-		d_pf = K(P0, P1, normalize=True)
-		return dist.log_prob(d_pf)
-	return log_prob
 
-logp = mk_log_prob(P0, K)
+logp = hmc.mk_log_prob(P0, K, rate=10) # increase rate to tighten uncertainty radius
+samples, ratio = hmc.sample(10, logp, P0, step_size=.005)
 
-mu = 10.0
-X, Y = vdp.dataset(mu)
-P1 = edmd(X, Y, obs)
-P1 = P1.to(device).requires_grad_()
+print('Acceptance ratio: ', ratio)
 
-grad = torch.autograd.grad(logp(P1), P1)
-print(grad)
+Z0 = obs.preimage(torch.mm(P0, obs(X))).cpu()
+plt.figure()
+plt.title('Nominal prediction')
+plt.plot(Z0[0], Z0[1])
 
+for _ in range(3):
+	Zn = obs.preimage(torch.mm(random.choice(samples), obs(X))).cpu()
+	plt.figure()
+	plt.title('Perturbed prediction (Kernel distance)')
+	plt.plot(Zn[0], Zn[1])
 
-# logp = mk_log_prob(P0, K)
-# samples = sample(10, logp, P0, seed=9001)
+for _ in range(3):
+	sigma = 0.1
+	eps = torch.distributions.Normal(torch.zeros_like(P0), torch.full(P0.shape, sigma)).sample()
+	Zn = obs.preimage(torch.mm(P0 + eps, obs(X))).cpu()
+	plt.figure()
+	plt.title('Perturbed prediction (Fro distance)')
+	plt.plot(Zn[0], Zn[1])
 
-# Z0 = obs.preimage(torch.mm(P0, obs(X))).cpu()
-# Zn = obs.preimage(torch.mm(samples[-1], obs(X))).cpu()
-
-# plt.figure()
-# plt.title('Nominal prediction')
-# plt.plot(Z0[0], Z0[1])
-# plt.figure()
-# plt.title('Perturbed prediction')
-# plt.plot(Zn[0], Zn[1])
-
-# plt.show()
+plt.show()

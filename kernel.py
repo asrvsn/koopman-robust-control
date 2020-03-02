@@ -1,7 +1,7 @@
 import torch
 
 class PFKernel:
-	def __init__(self, device: torch.device, d: int, m: int, T: int):
+	def __init__(self, device: torch.device, d: int, m: int, T: int, use_sqrt=True):
 		'''
 		TODOs: 
 		* allocate less memory
@@ -10,6 +10,7 @@ class PFKernel:
 		self.device = device
 		self.d = d
 		self.T = T
+		self.use_sqrt = use_sqrt
 		with torch.no_grad():
 			index = torch.arange(d, device=device).expand(m, -1)
 			product = torch.meshgrid(index.unbind())
@@ -26,28 +27,17 @@ class PFKernel:
 		# assert P1.shape == (self.d, self.d) and P2.shape == P1.shape
 		eps = 1e-6
 		if normalize:
-			# d = torch.sqrt(1 - self.__call__(P1, P2).pow(2) / (self.__call__(P1, P1) * self.__call__(P2, P2)))
-			d = 1 - self.__call__(P1, P2).pow(2) / (self.__call__(P1, P1) * self.__call__(P2, P2))
-			# d = d.clamp(1e-3)
-			print(d.item())
-			if torch.isinf(d).item():
-				print('inf!')
-			if torch.isnan(d).item():
-				print('nan!')
-			return d
+			if self.use_sqrt:
+				return torch.sqrt(1 - self.__call__(P1, P2).pow(2) / (self.__call__(P1, P1) * self.__call__(P2, P2)))
+			else:
+			# Note: true kernel is sqrt(), however there is a subgradient/NaN issue around sqrt(0). 
+				return 1 - self.__call__(P1, P2).pow(2) / (self.__call__(P1, P1) * self.__call__(P2, P2))
 		else:
 			sum_powers = torch.eye(self.d, device=self.device)
-			# print(torch.isnan(P1).any().item(), torch.isnan(P2).any().item())
-			# TODO: fix nan here
 			for _ in range(1, self.T):
 				sum_powers = sum_powers + torch.mm(torch.mm(P1, sum_powers), P2.t())
-			# print(torch.isnan(sum_powers).any().item())
-			# print(torch.isinf(sum_powers).any().item())
 			submatrices = torch.gather(sum_powers[self.subindex_row], 2, self.subindex_col) 
-			# print(submatrices.max().item())
 			result = submatrices.det().sum()
-			# result = result.clamp(1e-6, float('inf'))
-			# print(result.item())
 			return result
 
 	@staticmethod

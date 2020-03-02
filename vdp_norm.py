@@ -5,15 +5,18 @@ from features import *
 from kernel import *
 from operators import *
 from hmc import pdf
+from utils import set_seed
 import systems.vdp as vdp
 
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
 print('PF vs. Frobenius norm test - van der Pol')
 
+set_seed(9001)
+
 # Init features
 p, d, k = 10, 2, 20
-obs = PolynomialObservable(p, d, k, seed=9001)
+obs = PolynomialObservable(p, d, k)
 
 # Initialize kernel
 m, T = 2, 10

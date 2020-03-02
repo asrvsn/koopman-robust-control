@@ -14,7 +14,7 @@ class Observable:
 		pass
 
 class PolynomialObservable(Observable):
-	def __init__(self, p: int, d: int, k: int, seed=None):
+	def __init__(self, p: int, d: int, k: int):
 		# TODO: if k is too high, this procedure will loop forever
 
 		assert p > 0 and k > 0 
@@ -23,11 +23,6 @@ class PolynomialObservable(Observable):
 		self.p = p # max degree of polynomial
 		self.k = k # dimension of observable basis
 		self.psi = dict()
-
-		# use seed to deterministically obtain observables
-		if seed is not None:
-			random.seed(seed)
-			np.random.seed(seed)
 
 		# full state observable
 		for i in range(d):
