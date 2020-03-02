@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 from features import *
 from kernel import *
 from operators import *
+from hmc import pdf
 import systems.vdp as vdp
 
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
@@ -15,7 +16,7 @@ p, d, k = 10, 2, 20
 obs = PolynomialObservable(p, d, k, seed=9001)
 
 # Initialize kernel
-m, T = 2, 8
+m, T = 2, 10
 K = PFKernel(device, k, m, T)
 
 mu_0 = 0
@@ -37,10 +38,16 @@ for i, mu in enumerate(mu_rng):
 
 print(results)
 
+p = torch.log(pdf(torch.from_numpy(results[:, 0]), 1))
+print(p)
+
 plt.figure()
 plt.title('Kernel distance vs. mu')
 plt.yscale('log')
 plt.plot(mu_rng, results[:, 0])
+plt.figure()
+plt.title('Probability vs. mu')
+plt.plot(mu_rng, p)
 plt.figure()
 plt.title('Frobenius distance vs. mu')
 plt.plot(mu_rng, results[:, 1])
