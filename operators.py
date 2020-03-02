@@ -29,6 +29,18 @@ def kdmd(X: torch.Tensor, Y: torch.Tensor, k: Kernel, epsilon=0, operator='K'):
 	P = torch.mm(torch.pinverse(G_XX + epsilon*torch.eye(n, device=device)), G_XY)
 	return P
 
+def extrapolate(P: torch.Tensor, x: torch.Tensor, obs: Observable, t: int):
+	P, x = P.detach(), x.detach().unsqueeze(1)
+	Y = torch.full((x.shape[0], t), np.nan, device=x.device)
+	for i in range(t):
+		if i == 0:
+			Y[:, i] = obs.preimage(torch.mm(P, obs(x))).view(-1)
+		else:
+			x = Y[:, i-1].unsqueeze(1)
+			Y[:, i] = obs.preimage(torch.mm(P, obs(x))).view(-1)
+	return Y
+
+
 if __name__ == '__main__':
 	import systems.vdp as vdp
 
@@ -48,6 +60,10 @@ if __name__ == '__main__':
 	plt.plot(Y[0], Y[1])
 	plt.figure(figsize=(8,8))
 	plt.title('eDMD prediction')
+	plt.plot(Z[0], Z[1])
+	plt.figure(figsize=(8,8))
+	plt.title('eDMD extrapolation')
+	Z = extrapolate(P, X[:,0], obs, X.shape[1])
 	plt.plot(Z[0], Z[1])
 
 	print('kDMD test')

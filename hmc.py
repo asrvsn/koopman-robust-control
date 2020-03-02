@@ -25,7 +25,7 @@ def gibbs(params: torch.Tensor):
 	dist = torch.distributions.Normal(torch.zeros_like(params), torch.ones_like(params))
 	return dist.sample()
 
-def leapfrog(params: torch.Tensor, momentum: torch.Tensor, log_prob: Callable, n_skip: int, step_size: int):
+def hmc_step(params: torch.Tensor, momentum: torch.Tensor, log_prob: Callable, n_skip: int, step_size: int):
 	def params_grad(p):
 		p = p.detach().requires_grad_()
 		logp = log_prob(p)
@@ -51,19 +51,19 @@ def sample(n_samples: int, log_prob: Callable, P0: torch.Tensor, step_size=0.03,
 	n = 0
 	while len(ret_params) < n_samples:
 		momentum = gibbs(params)
-		ham = hamiltonian(params, momentum, log_prob)
-		leapfrog_params, leapfrog_momentum = leapfrog(params, momentum, log_prob, n_skip, step_size)
+		h_old = hamiltonian(params, momentum, log_prob)
+		params, momentum = hmc_step(params, momentum, log_prob, n_skip, step_size)
 
-		params = leapfrog_params.detach().requires_grad_()
-		momentum = leapfrog_momentum
-		new_ham = hamiltonian(params, momentum, log_prob)
+		params = params.detach().requires_grad_()
+		h_new = hamiltonian(params, momentum, log_prob)
 
-		if accept(ham, new_ham) and n > n_burn:
-			ret_params.append(leapfrog_params)
+		if PFKernel.validate(params) and accept(h_old, h_new) and n > n_burn:
+			ret_params.append(params)
+			print('Accepted')
 
 		n += 1
 
-	ratio = len(ret_params) / n
+	ratio = len(ret_params) / (n - n_burn)
 	return list(map(lambda t: t.detach(), ret_params)), ratio
 
 
