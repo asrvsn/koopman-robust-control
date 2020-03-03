@@ -24,6 +24,7 @@ K = PFKernel(device, k, m, T, use_sqrt=False)
 # Init data
 mu = 2.0
 X, Y = vdp.dataset(mu)
+X, Y = X.to(device), Y.to(device)
 P0 = edmd(X, Y, obs)
 P0 = P0.to(device)
 # P0 /= torch.norm(P0, 2)
@@ -31,8 +32,8 @@ print('Op valid:', PFKernel.validate(P0))
 
 # HMC
 
-logp = hmc.mk_log_prob(P0, K, rate=100) # increase rate to tighten uncertainty radius
-samples, ratio = hmc.sample(10, logp, P0, step_size=.0001, pf_validate=True)
+potential = hmc.mk_potential(P0, K, rate=100) # increase rate to tighten uncertainty radius
+samples, ratio = hmc.sample(10, potential, P0, step_size=.0001, pf_validate=True)
 
 print('Acceptance ratio: ', ratio)
 (eig, _) = torch.eig(P0)
@@ -52,25 +53,24 @@ plt.plot(Z0[0], Z0[1])
 
 plt.figure()
 plt.title('Nominal extrapolation')
-Z0 = extrapolate(P0, x_0, obs, t)
+Z0 = extrapolate(P0, x_0, obs, t).cpu()
 plt.plot(Z0[0], Z0[1])
 
-for _ in range(3):
-	Pn = random.choice(samples)
+for Pn in samples:
 	# Zn = obs.preimage(torch.mm(Pn, obs(X))).cpu()
-	Zn = extrapolate(Pn, x_0, obs, t)
+	Zn = extrapolate(Pn, x_0, obs, t).cpu()
 	plt.figure()
 	plt.title('Perturbed extrapolation (Kernel distance)')
 	plt.plot(Zn[0], Zn[1])
 
-for _ in range(3):
-	sigma = 0.1
-	eps = torch.distributions.Normal(torch.zeros_like(P0), torch.full(P0.shape, sigma)).sample()
-	Pn = P0 + eps
-	# Zn = obs.preimage(torch.mm(Pn, obs(X))).cpu()
-	Zn = extrapolate(Pn, x_0, obs, t)
-	plt.figure()
-	plt.title('Perturbed extrapolation (Fro distance)')
-	plt.plot(Zn[0], Zn[1])
+# for _ in range(3):
+# 	sigma = 0.1
+# 	eps = torch.distributions.Normal(torch.zeros_like(P0, device=device), torch.full(P0.shape, sigma, device=device)).sample()
+# 	Pn = P0 + eps
+# 	# Zn = obs.preimage(torch.mm(Pn, obs(X))).cpu()
+# 	Zn = extrapolate(Pn, x_0, obs, t).cpu()
+# 	plt.figure()
+# 	plt.title('Perturbed extrapolation (Fro distance)')
+# 	plt.plot(Zn[0], Zn[1])
 
 plt.show()
