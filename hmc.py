@@ -1,4 +1,5 @@
 import torch
+import numpy as np
 import matplotlib.pyplot as plt
 from typing import Callable
 
@@ -7,20 +8,26 @@ from kernel import *
 def exponential_pdf(x: torch.Tensor, rate=1.0):
 	return rate * torch.exp(-rate*x)
 
-def mk_potential(P0: torch.Tensor, K: PFKernel, rate=1.0, bound_spectrum=True, eps=0.001):
+def gelu(x):
+	return x*(1+torch.erf(x/np.sqrt(2)))/2
+
+def mk_potential(P0: torch.Tensor, K: PFKernel, rate=1.0, bound_spectrum=True, eps=0.0001):
 	rate = torch.Tensor([rate]).to(P0.device)
 	dist = torch.distributions.exponential.Exponential(rate)
+	sp_bound = torch.Tensor([1.0+eps]).to(P0.device)
 	def potential(P1: torch.Tensor):
 		d_pf = K(P0, P1, normalize=True)
 		print(d_pf.item())
-		u = dist.log_prob(d_pf)
+		u = -dist.log_prob(d_pf)
 		if bound_spectrum:
-			u = u + torch.sigmoid(torch.eig(P1)[0].max() - 1.0 - eps)
+			sp = torch.svd(P1)[1].max().pow(2)
+			# u = u + torch.max(sp, sp_bound) - sp_bound
+			u = u + gelu(sp-1-eps)
 		return u
 	return potential
 
-def hamiltonian(params: torch.Tensor, momentum: torch.Tensor, log_prob: Callable):
-	U = -log_prob(params)
+def hamiltonian(params: torch.Tensor, momentum: torch.Tensor, potential: Callable):
+	U = potential(params)
 	K = 0.5 * torch.trace(torch.mm(momentum.t(), momentum))
 	return U + K 
 
@@ -48,7 +55,7 @@ def accept(h_old: torch.Tensor, h_new: torch.Tensor):
 	rho = min(0., h_old - h_new)
 	return rho >= torch.log(torch.rand(1).to(h_old.device))
 
-def sample(n_samples: int, potential: Callable, P0: torch.Tensor, step_size=0.03, n_skip=10, n_burn=10, pf_validate=False):
+def sample(n_samples: int, potential: Callable, P0: torch.Tensor, step_size=0.03, n_skip=10, n_burn=10, pf_thresh=None):
 	params = P0.clone().requires_grad_()
 	ret_params = [params.clone()]
 	n = 0
@@ -60,7 +67,7 @@ def sample(n_samples: int, potential: Callable, P0: torch.Tensor, step_size=0.03
 		params = params.detach().requires_grad_()
 		h_new = hamiltonian(params, momentum, potential)
 
-		if (not pf_validate or PFKernel.validate(params, eps=0.001)) and accept(h_old, h_new) and n > n_burn:
+		if (pf_thresh is None or PFKernel.validate(params, eps=pf_thresh)) and accept(h_old, h_new) and n > n_burn:
 			ret_params.append(params)
 			print('Accepted')
 

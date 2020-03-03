@@ -23,7 +23,7 @@ K = PFKernel(device, k, m, T, use_sqrt=False)
 
 # Init data
 mu = 2.0
-X, Y = vdp.dataset(mu)
+X, Y = vdp.dataset(mu, skip=200)
 X, Y = X.to(device), Y.to(device)
 P0 = edmd(X, Y, obs)
 P0 = P0.to(device)
@@ -32,18 +32,21 @@ print('Op valid:', PFKernel.validate(P0))
 
 # HMC
 
-potential = hmc.mk_potential(P0, K, rate=100) # increase rate to tighten uncertainty radius
-samples, ratio = hmc.sample(10, potential, P0, step_size=.0001, pf_validate=True)
+pf_thresh = 1e-5
+
+potential = hmc.mk_potential(P0, K, rate=100, eps=pf_thresh) # increase rate to tighten uncertainty radius
+samples, ratio = hmc.sample(10, potential, P0, step_size=.0001, pf_thresh=pf_thresh)
 
 print('Acceptance ratio: ', ratio)
 (eig, _) = torch.eig(P0)
-print('Spectral norm:', eig.max().item())
-print('Operator valid:', PFKernel.validate(P0))
+print('Nominal spectral norm:', eig.max().item())
+print('Nominal valid:', PFKernel.validate(P0))
+print('Perturbed valid:', [PFKernel.validate(P, eps=pf_thresh) for P in samples])
 
 # Visualize perturbations
 
 x_0 = X[:,0]
-t = 1000
+t = 5000
 # t = X.shape[1]
 
 plt.figure()
