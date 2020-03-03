@@ -45,7 +45,7 @@ def accept(h_old: torch.Tensor, h_new: torch.Tensor):
 	rho = min(0., h_old - h_new)
 	return rho >= torch.log(torch.rand(1))
 
-def sample(n_samples: int, log_prob: Callable, P0: torch.Tensor, step_size=0.03, n_skip=10, n_burn=10):
+def sample(n_samples: int, log_prob: Callable, P0: torch.Tensor, step_size=0.03, n_skip=10, n_burn=10, pf_validate=False):
 	params = P0.clone().requires_grad_()
 	ret_params = [params.clone()]
 	n = 0
@@ -57,7 +57,7 @@ def sample(n_samples: int, log_prob: Callable, P0: torch.Tensor, step_size=0.03,
 		params = params.detach().requires_grad_()
 		h_new = hamiltonian(params, momentum, log_prob)
 
-		if PFKernel.validate(params) and accept(h_old, h_new) and n > n_burn:
+		if (not pf_validate or PFKernel.validate(params)) and accept(h_old, h_new) and n > n_burn:
 			ret_params.append(params)
 			print('Accepted')
 

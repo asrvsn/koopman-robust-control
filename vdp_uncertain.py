@@ -11,7 +11,7 @@ import systems.vdp as vdp
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 torch.autograd.set_detect_anomaly(True)
 
-# set_seed(9001)
+set_seed(9001)
 
 # Init features
 p, d, k = 3, 2, 8
@@ -22,11 +22,12 @@ m, T = 2, 8
 K = PFKernel(device, k, m, T, use_sqrt=False)
 
 # Init data
-mu = 1
-X, Y = vdp.dataset(mu)
+mu = 2.0
+X, Y = vdp.dataset(mu, skip=300)
 P0 = edmd(X, Y, obs)
 P0 = P0.to(device)
-# print('Op valid:', PFKernel.validate(P0))
+# P0 /= torch.norm(P0, 2)
+print('Op valid:', PFKernel.validate(P0))
 
 # HMC
 
@@ -37,18 +38,19 @@ print('Acceptance ratio: ', ratio)
 
 # Visualize perturbations
 
-# Z0 = obs.preimage(torch.mm(P0, obs(X))).cpu()
 x_0 = X[:,0]
-t = 100 # X.shape[1]
+t = 1000
+# t = X.shape[1]
 
+# Z0 = obs.preimage(torch.mm(P0, obs(X))).cpu()
 Z0 = extrapolate(P0, x_0, obs, t)
 plt.figure()
 plt.title('Nominal prediction')
 plt.plot(Z0[0], Z0[1])
 
 for _ in range(3):
-	# Zn = obs.preimage(torch.mm(random.choice(samples), obs(X))).cpu()
 	Pn = random.choice(samples)
+	# Zn = obs.preimage(torch.mm(Pn, obs(X))).cpu()
 	Zn = extrapolate(Pn, x_0, obs, t)
 	plt.figure()
 	plt.title('Perturbed prediction (Kernel distance)')
@@ -57,8 +59,8 @@ for _ in range(3):
 for _ in range(3):
 	sigma = 0.1
 	eps = torch.distributions.Normal(torch.zeros_like(P0), torch.full(P0.shape, sigma)).sample()
-	# Zn = obs.preimage(torch.mm(P0 + eps, obs(X))).cpu()
 	Pn = P0 + eps
+	# Zn = obs.preimage(torch.mm(Pn, obs(X))).cpu()
 	Zn = extrapolate(Pn, x_0, obs, t)
 	plt.figure()
 	plt.title('Perturbed prediction (Fro distance)')

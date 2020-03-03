@@ -76,4 +76,5 @@ if __name__ == '__main__':
 	P = (P.t() / P.sum(1)).t()
 	print('Identity operator is valid: ', PFKernel.validate(A))
 	print('Random operator is valid:', PFKernel.validate(B))
-	print('Stochastic operator is valid:', PFKernel.validate(P))
+	print('Row-normalized operator is valid:', PFKernel.validate(P))
+	print('Spectral-normalized operator is valid:', PFKernel.validate(A / torch.norm(A, 2)))
