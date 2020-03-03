@@ -32,16 +32,19 @@ print('Op valid:', PFKernel.validate(P0))
 
 # HMC
 
-pf_thresh = 1e-5
+pf_thresh = 1e-6
 
 potential = hmc.mk_potential(P0, K, rate=100, eps=pf_thresh) # increase rate to tighten uncertainty radius
-samples, ratio = hmc.sample(10, potential, P0, step_size=.0001, pf_thresh=pf_thresh)
+samples, ratio = hmc.sample(20, potential, P0, step_size=.0001, pf_thresh=pf_thresh)
 
 print('Acceptance ratio: ', ratio)
 (eig, _) = torch.eig(P0)
 print('Nominal spectral norm:', eig.max().item())
 print('Nominal valid:', PFKernel.validate(P0))
 print('Perturbed valid:', [PFKernel.validate(P, eps=pf_thresh) for P in samples])
+
+# Save samples
+torch.save(torch.stack(samples), 'perturbed.pt')
 
 # Visualize perturbations
 
@@ -59,7 +62,7 @@ plt.title('Nominal extrapolation')
 Z0 = extrapolate(P0, x_0, obs, t).cpu()
 plt.plot(Z0[0], Z0[1])
 
-for Pn in samples:
+for Pn in samples[1:]:
 	# Zn = obs.preimage(torch.mm(Pn, obs(X))).cpu()
 	Zn = extrapolate(Pn, x_0, obs, t).cpu()
 	plt.figure()
@@ -77,3 +80,4 @@ for Pn in samples:
 # 	plt.plot(Zn[0], Zn[1])
 
 plt.show()
+
