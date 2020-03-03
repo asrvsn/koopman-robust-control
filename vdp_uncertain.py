@@ -14,16 +14,16 @@ torch.autograd.set_detect_anomaly(True)
 set_seed(9001)
 
 # Init features
-p, d, k = 3, 2, 8
+p, d, k = 4, 2, 5
 obs = PolynomialObservable(p, d, k)
 
 # Initialize kernel
-m, T = 2, 8
+m, T = 2, 12
 K = PFKernel(device, k, m, T, use_sqrt=False)
 
 # Init data
 mu = 2.0
-X, Y = vdp.dataset(mu, skip=300)
+X, Y = vdp.dataset(mu)
 P0 = edmd(X, Y, obs)
 P0 = P0.to(device)
 # P0 /= torch.norm(P0, 2)
@@ -32,9 +32,12 @@ print('Op valid:', PFKernel.validate(P0))
 # HMC
 
 logp = hmc.mk_log_prob(P0, K, rate=100) # increase rate to tighten uncertainty radius
-samples, ratio = hmc.sample(10, logp, P0, step_size=.005)
+samples, ratio = hmc.sample(10, logp, P0, step_size=.0001, pf_validate=True)
 
 print('Acceptance ratio: ', ratio)
+(eig, _) = torch.eig(P0)
+print('Spectral norm:', eig.max().item())
+print('Operator valid:', PFKernel.validate(P0))
 
 # Visualize perturbations
 
@@ -42,10 +45,14 @@ x_0 = X[:,0]
 t = 1000
 # t = X.shape[1]
 
-# Z0 = obs.preimage(torch.mm(P0, obs(X))).cpu()
-Z0 = extrapolate(P0, x_0, obs, t)
 plt.figure()
 plt.title('Nominal prediction')
+Z0 = obs.preimage(torch.mm(P0, obs(X))).cpu()
+plt.plot(Z0[0], Z0[1])
+
+plt.figure()
+plt.title('Nominal extrapolation')
+Z0 = extrapolate(P0, x_0, obs, t)
 plt.plot(Z0[0], Z0[1])
 
 for _ in range(3):
@@ -53,7 +60,7 @@ for _ in range(3):
 	# Zn = obs.preimage(torch.mm(Pn, obs(X))).cpu()
 	Zn = extrapolate(Pn, x_0, obs, t)
 	plt.figure()
-	plt.title('Perturbed prediction (Kernel distance)')
+	plt.title('Perturbed extrapolation (Kernel distance)')
 	plt.plot(Zn[0], Zn[1])
 
 for _ in range(3):
@@ -63,7 +70,7 @@ for _ in range(3):
 	# Zn = obs.preimage(torch.mm(Pn, obs(X))).cpu()
 	Zn = extrapolate(Pn, x_0, obs, t)
 	plt.figure()
-	plt.title('Perturbed prediction (Fro distance)')
+	plt.title('Perturbed extrapolation (Fro distance)')
 	plt.plot(Zn[0], Zn[1])
 
 plt.show()

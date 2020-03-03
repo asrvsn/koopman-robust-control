@@ -41,13 +41,13 @@ class PFKernel:
 			return result
 
 	@staticmethod
-	def validate(P: torch.Tensor):
+	def validate(P: torch.Tensor, eps=1e-3):
 		# Kernel only valid for operators with eigenvalues on unit circle.
 		with torch.no_grad():
 			(eig, _) = torch.eig(P)
 			re, im = eig[:, 0], eig[:, 1]
 			norm = torch.sqrt(re.pow(2) + im.pow(2))
-			return (norm <= 1.0).all().item()
+			return (norm <= 1.0 + eps).all().item()
 
 '''
 Tests for P-F kernel

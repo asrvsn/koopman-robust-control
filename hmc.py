@@ -57,7 +57,7 @@ def sample(n_samples: int, log_prob: Callable, P0: torch.Tensor, step_size=0.03,
 		params = params.detach().requires_grad_()
 		h_new = hamiltonian(params, momentum, log_prob)
 
-		if (not pf_validate or PFKernel.validate(params)) and accept(h_old, h_new) and n > n_burn:
+		if (not pf_validate or PFKernel.validate(params, eps=0.001)) and accept(h_old, h_new) and n > n_burn:
 			ret_params.append(params)
 			print('Accepted')
 
