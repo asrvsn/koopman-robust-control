@@ -21,7 +21,7 @@ obs = PolynomialObservable(p, d, k)
 
 # Init data
 mu = 2.0
-X, Y = vdp.dataset(mu, n=1000, skip=200)
+X, Y = vdp.dataset(mu, skip=200)
 X, Y = X.to(device), Y.to(device)
 PsiX, PsiY = obs(X), obs(Y)
 
@@ -34,7 +34,7 @@ P0 = dmd(PsiX, PsiY)
 P0 = P0.to(device)
 # P0 /= torch.norm(P0, 2)
 assert not torch.isnan(P0).any().item()
-print('Op valid:', PFKernel.validate(P0))
+print('Op valid:', is_semistable(P0))
 
 # HMC
 
@@ -44,13 +44,13 @@ baseline = False
 dist_func = (lambda x, y: torch.norm(x - y)) if baseline else (lambda x, y: K(x, y, normalize=True)) 
 
 potential = hmc.mk_potential(P0, dist_func, rate=100, pf_thresh=pf_thresh) # increase rate to tighten uncertainty radius
-samples, ratio = hmc.sample(10, potential, P0, step_size=.001, pf_thresh=pf_thresh)
+samples, ratio = hmc.sample(10, potential, P0, step_size=.0001, pf_thresh=pf_thresh)
 
 print('Acceptance ratio: ', ratio)
 (eig, _) = torch.eig(P0)
 print('Nominal spectral norm:', eig.max().item())
-print('Nominal valid:', PFKernel.validate(P0))
-print('Perturbed valid:', [PFKernel.validate(P, eps=pf_thresh) for P in samples])
+print('Nominal valid:', is_semistable(P0, eps=pf_thresh))
+print('Perturbed valid:', [is_semistable(P, eps=pf_thresh) for P in samples])
 
 # Save samples
 name = 'perturbed_baseline' if baseline else 'perturbed_pf' 
@@ -58,7 +58,6 @@ torch.save(torch.stack(samples), f'{name}.pt')
 
 # Visualize perturbations
 
-x_0 = X[:,0]
 t = 5000
 # t = X.shape[1]
 

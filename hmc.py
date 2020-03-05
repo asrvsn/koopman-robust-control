@@ -3,9 +3,12 @@ import numpy as np
 import matplotlib.pyplot as plt
 from typing import Callable
 
-from kernel import *
+from operators import is_semistable
 
-gelu = torch.nn.GELU()
+# gelu = torch.nn.GELU()
+
+def gelu(x):
+	return x*(1+torch.erf(x/np.sqrt(2)))/2
 
 def mk_potential(P0: torch.Tensor, kernel: Callable, rate=1.0, bound_spectrum=True, pf_thresh=0.0001):
 	rate = torch.Tensor([rate]).to(P0.device)
@@ -63,7 +66,7 @@ def sample(n_samples: int, potential: Callable, P0: torch.Tensor, step_size=0.03
 		params = params.detach().requires_grad_()
 		h_new = hamiltonian(params, momentum, potential)
 
-		if (pf_thresh is None or PFKernel.validate(params, eps=pf_thresh)) and accept(h_old, h_new) and n > n_burn:
+		if (pf_thresh is None or is_semistable(params, eps=pf_thresh)) and accept(h_old, h_new) and n > n_burn:
 			ret_params.append(params)
 			print('Accepted')
 

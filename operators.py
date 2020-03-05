@@ -28,6 +28,14 @@ def kdmd(X: torch.Tensor, Y: torch.Tensor, k: Kernel, epsilon=0, operator='K'):
 	P = torch.mm(torch.pinverse(G_XX + epsilon*torch.eye(n, device=device)), G_XY)
 	return P
 
+def is_semistable(P: torch.Tensor, eps=1e-3):
+	# Kernel only valid for operators with eigenvalues on unit circle.
+	with torch.no_grad():
+		(eig, _) = torch.eig(P)
+		re, im = eig[:, 0], eig[:, 1]
+		norm = torch.sqrt(re.pow(2) + im.pow(2))
+		return (norm <= 1.0 + eps).all().item()
+
 if __name__ == '__main__':
 	import systems.vdp as vdp
 	set_seed(9001)

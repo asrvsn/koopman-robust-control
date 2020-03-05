@@ -1,4 +1,5 @@
 import torch
+from operators import is_semistable
 
 class PFKernel:
 	def __init__(self, device: torch.device, d: int, m: int, T: int, use_sqrt=True):
@@ -40,15 +41,6 @@ class PFKernel:
 			result = submatrices.det().sum()
 			return result
 
-	@staticmethod
-	def validate(P: torch.Tensor, eps=1e-3):
-		# Kernel only valid for operators with eigenvalues on unit circle.
-		with torch.no_grad():
-			(eig, _) = torch.eig(P)
-			re, im = eig[:, 0], eig[:, 1]
-			norm = torch.sqrt(re.pow(2) + im.pow(2))
-			return (norm <= 1.0 + eps).all().item()
-
 '''
 Tests for P-F kernel
 '''
@@ -74,7 +66,7 @@ if __name__ == '__main__':
 	A, B = torch.eye(d), torch.randn(d, d, device=device)
 	P = B.clamp(0)
 	P = (P.t() / P.sum(1)).t()
-	print('Identity operator is valid: ', PFKernel.validate(A))
-	print('Random operator is valid:', PFKernel.validate(B))
-	print('Row-normalized operator is valid:', PFKernel.validate(P))
-	print('Spectral-normalized operator is valid:', PFKernel.validate(A / torch.norm(A, 2)))
+	print('Identity operator is valid: ', is_semistable(A))
+	print('Random operator is valid:', is_semistable(B))
+	print('Row-normalized operator is valid:', is_semistable(P))
+	print('Spectral-normalized operator is valid:', is_semistable(A / torch.norm(A, 2)))
