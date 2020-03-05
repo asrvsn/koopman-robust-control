@@ -13,6 +13,32 @@ class Observable:
 	def __init__(self):
 		pass
 
+class DelayObservable(Observable):
+	''' Delay-coordinate embedding '''
+	def __init__(self, tau: int):
+		assert tau >= 0
+		self.tau = tau
+
+	def __call__(self, X: torch.Tensor):
+		assert X.shape[1] >= self.tau + 1
+		n = X.shape[1] - self.tau
+		d = (self.tau + 1) * X.shape[0]
+		Y = torch.empty((d, n), device=X.device)
+		for i in range(n):
+			Y[:,i] = torch.flatten(X[:,i:i+self.tau+1].t())
+		return Y
+
+	def preimage(self, Y: torch.Tensor):
+		d = int(Y.shape[0] / (self.tau + 1))
+		n = Y.shape[1] + self.tau 
+		X = torch.empty((d, n), device=Y.device)
+		for i in range(Y.shape[1]):
+			X[:, i] = Y[:d, i]
+		for j in range(1, self.tau+1):
+			i = Y.shape[1] + j - 1
+			X[:, i] = Y[j*d:(j+1)*d, -1]
+		return X
+
 class PolynomialObservable(Observable):
 	def __init__(self, p: int, d: int, k: int):
 		# TODO: if k is too high, this procedure will loop forever
@@ -104,11 +130,22 @@ def gramian(X: torch.Tensor, Y: torch.Tensor, k: Kernel):
 		return torch.mm(X.t(), Y)
 
 if __name__ == '__main__': 
+	print('Poly obs. test')
 	p, d, k = 3, 5, 20
 	obs = PolynomialObservable(p, d, k)
-	print('Polynomials:')
+	print('Polynomial terms:')
 	print(obs.psi.keys())
 	X = torch.randn((d, 10))
 	Y = obs(X)
 	Z = obs.preimage(Y)
-	print('Obs preimage correct: ', (X == Z).all().item())
+	assert (X == Z).all().item(), 'poly preimage incorrect'
+
+	print('Delay obs. test')
+	obs = DelayObservable(3)
+	X = torch.Tensor([[i*x for x in range(3)] for i in range(1, 6)]).t()
+	print('X: ', X)
+	Y = obs(X)
+	print('Y: ', Y)
+	Z = obs.preimage(Y)
+	print('Z: ', Z)
+	assert (X == Z).all().item(), 'delay preimage incorrect'
