@@ -5,11 +5,7 @@ from typing import Callable
 
 from kernel import *
 
-def exponential_pdf(x: torch.Tensor, rate=1.0):
-	return rate * torch.exp(-rate*x)
-
-def gelu(x):
-	return x*(1+torch.erf(x/np.sqrt(2)))/2
+gelu = torch.nn.GELU()
 
 def mk_potential(P0: torch.Tensor, K: PFKernel, rate=1.0, bound_spectrum=True, eps=0.0001):
 	rate = torch.Tensor([rate]).to(P0.device)

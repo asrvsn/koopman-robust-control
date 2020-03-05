@@ -24,7 +24,8 @@ K = PFKernel(device, k, m, T)
 
 mu_0 = 0
 X, Y = vdp.dataset(mu_0)
-P_0 = edmd(X, Y, obs)
+PsiX, PsiY = obs(X), obs(Y)
+P_0 = dmd(PsiX, PsiY)
 P_0 = P_0.to(device)
 
 n = 70

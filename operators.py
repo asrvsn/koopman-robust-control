@@ -9,12 +9,10 @@ import matplotlib.pyplot as plt
 
 from features import *
 
-def edmd(X: torch.Tensor, Y: torch.Tensor, psi: Observable, operator='K'):
+def dmd(X: torch.Tensor, Y: torch.Tensor, operator='K'):
 	X, Y = X.detach(), Y.detach() 
-	PsiX = psi(X)
-	PsiY = psi(Y)
-	C_XX = torch.mm(PsiX, PsiX.t())
-	C_XY = torch.mm(PsiX, PsiY.t())
+	C_XX = torch.mm(X, X.t())
+	C_XY = torch.mm(X, Y.t())
 	if operator == 'P': C_YX = C_XY.t()
 	P = torch.mm(torch.pinverse(C_XX), C_XY)
 	return P.t()
@@ -49,7 +47,8 @@ if __name__ == '__main__':
 	X, Y = vdp.dataset(mu)
 	p, d, k = 3, X.shape[0], 8
 	obs = PolynomialObservable(p, d, k)
-	P = edmd(X, Y, obs)
+	PsiX, PsiY = obs(X), obs(Y)
+	P = dmd(PsiX, PsiY)
 	assert P.shape[0] == P.shape[1] == k
 
 	print('eDMD prediction')

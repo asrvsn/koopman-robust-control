@@ -14,20 +14,26 @@ torch.autograd.set_detect_anomaly(True)
 set_seed(9001)
 
 # Init features
-p, d, k = 4, 2, 5
-obs = PolynomialObservable(p, d, k)
-
-# Initialize kernel
-m, T = 2, 12
-K = PFKernel(device, k, m, T, use_sqrt=False)
+# p, d, k = 4, 2, 5
+# obs = PolynomialObservable(p, d, k)
+tau = 10
+obs = DelayObservable(tau)
 
 # Init data
 mu = 2.0
-X, Y = vdp.dataset(mu, skip=200)
+X, Y = vdp.dataset(mu, n=1000, skip=200)
 X, Y = X.to(device), Y.to(device)
-P0 = edmd(X, Y, obs)
+PsiX, PsiY = obs(X), obs(Y)
+P0 = dmd(PsiX, PsiY)
 P0 = P0.to(device)
+print(torch.isnan(P0).any().item())
 # P0 /= torch.norm(P0, 2)
+
+# Initialize kernel
+d, m, T = PsiX.shape[0], 2, 12
+K = PFKernel(device, d, m, T, use_sqrt=False)
+
+# Nominal operator
 print('Op valid:', PFKernel.validate(P0))
 
 # HMC
