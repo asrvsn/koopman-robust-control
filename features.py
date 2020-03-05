@@ -137,7 +137,7 @@ if __name__ == '__main__':
 	assert (X == Z).all().item(), 'poly preimage incorrect'
 
 	print('Delay obs. test')
-	obs = DelayObservable(3)
+	obs = DelayObservable(2)
 	X = torch.Tensor([[i*x for x in range(3)] for i in range(1, 6)]).t()
 	print('X: ', X)
 	Y = obs(X)

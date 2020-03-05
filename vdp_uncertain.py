@@ -14,10 +14,10 @@ torch.autograd.set_detect_anomaly(True)
 set_seed(9001)
 
 # Init features
-# p, d, k = 4, 2, 5
-# obs = PolynomialObservable(p, d, k)
-tau = 10
-obs = DelayObservable(tau)
+p, d, k = 4, 2, 5
+obs = PolynomialObservable(p, d, k)
+# tau = 10
+# obs = DelayObservable(tau) # Delay observable is not predictive, causes NaN
 
 # Init data
 mu = 2.0
@@ -26,7 +26,7 @@ X, Y = X.to(device), Y.to(device)
 PsiX, PsiY = obs(X), obs(Y)
 P0 = dmd(PsiX, PsiY)
 P0 = P0.to(device)
-print(torch.isnan(P0).any().item())
+# print(torch.isnan(P0).any().item())
 # P0 /= torch.norm(P0, 2)
 
 # Initialize kernel
