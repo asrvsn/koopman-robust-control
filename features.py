@@ -39,6 +39,17 @@ class DelayObservable(Observable):
 			X[:, i] = Y[j*d:(j+1)*d, -1]
 		return X
 
+	def extrapolate(self, P: torch.Tensor, X: torch.Tensor, t: int):
+		d = X.shape[0]
+		P = P.detach()
+		Y = torch.full((X.shape[0], t), np.nan, device=X.device)
+		Y[:, 0:self.tau+1] = X[:, 0:self.tau+1]
+		for i in range(self.tau+1, t):
+			z = torch.flatten(Y[:, i-self.tau-1:i].t())
+			z = torch.mm(P, z).view(-1)
+			Y[:, i] = z[:d]
+		return Y
+
 class PolynomialObservable(Observable):
 	def __init__(self, p: int, d: int, k: int):
 		# TODO: if k is too high, this procedure will loop forever
@@ -87,6 +98,18 @@ class PolynomialObservable(Observable):
 
 	def preimage(self, X: torch.Tensor): 
 		return X[:self.d]
+
+	def extrapolate(self, P: torch.Tensor, X: torch.Tensor, t: int):
+		P, x = P.detach(), X[:,0].detach().unsqueeze(1)
+		Y = torch.full((X.shape[0], t), np.nan, device=X.device)
+		for i in range(t):
+			if i == 0:
+				Y[:, i] = obs.preimage(torch.mm(P, obs(x))).view(-1)
+			else:
+				x = Y[:, i-1].unsqueeze(1)
+				Y[:, i] = obs.preimage(torch.mm(P, obs(x))).view(-1)
+		return Y
+
 
 class GaussianObservable(Observable):
 	def __init__(self, sigma: float):

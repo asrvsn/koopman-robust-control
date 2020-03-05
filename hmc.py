@@ -7,18 +7,18 @@ from kernel import *
 
 gelu = torch.nn.GELU()
 
-def mk_potential(P0: torch.Tensor, K: PFKernel, rate=1.0, bound_spectrum=True, eps=0.0001):
+def mk_potential(P0: torch.Tensor, kernel: Callable, rate=1.0, bound_spectrum=True, pf_thresh=0.0001):
 	rate = torch.Tensor([rate]).to(P0.device)
 	dist = torch.distributions.exponential.Exponential(rate)
-	sp_bound = torch.Tensor([1.0+eps]).to(P0.device)
+	sp_bound = torch.Tensor([1.0+pf_thresh]).to(P0.device)
 	def potential(P1: torch.Tensor):
-		d_pf = K(P0, P1, normalize=True)
-		print(d_pf.item())
-		u = -dist.log_prob(d_pf)
+		d_k = kernel(P0, P1) 
+		print(d_k.item())
+		u = -dist.log_prob(d_k)
 		if bound_spectrum:
 			sp = torch.svd(P1)[1].max().pow(2)
 			# u = u + torch.max(sp, sp_bound) - sp_bound
-			u = u + gelu(sp-1-eps)
+			u = u + gelu(sp-1-pf_thresh)
 		return u
 	return potential
 
@@ -53,7 +53,7 @@ def accept(h_old: torch.Tensor, h_new: torch.Tensor):
 
 def sample(n_samples: int, potential: Callable, P0: torch.Tensor, step_size=0.03, n_skip=10, n_burn=10, pf_thresh=None):
 	params = P0.clone().requires_grad_()
-	ret_params = [params.clone()]
+	ret_params = []
 	n = 0
 	while len(ret_params) < n_samples:
 		momentum = gibbs(params)

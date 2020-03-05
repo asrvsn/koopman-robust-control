@@ -28,54 +28,28 @@ def kdmd(X: torch.Tensor, Y: torch.Tensor, k: Kernel, epsilon=0, operator='K'):
 	P = torch.mm(torch.pinverse(G_XX + epsilon*torch.eye(n, device=device)), G_XY)
 	return P
 
-# def extrapolate(P: torch.Tensor, z: torch.Tensor, t: int):
-# 	'''
-# 	z is initial observable vector (not state vector)
-# 	'''
-# 	P, z = P.detach(), z.detach().unsqueeze(1)
-# 	Y = torch.full((z.shape[0], t), np.nan, device=z.device)
-# 	for i in range(t):
-# 		if i == 0:
-# 			Y[:, i] = torch.mm(P, z).view(-1)
-# 		else:
-# 			z = Y[:, i-1].unsqueeze(1)
-# 			Y[:, i] = torch.mm(P, z).view(-1)
-# 	return Y
-
-def extrapolate(P: torch.Tensor, x: torch.Tensor, obs: Observable, t: int):
-	P, x = P.detach(), x.detach().unsqueeze(1)
-	Y = torch.full((x.shape[0], t), np.nan, device=x.device)
-	for i in range(t):
-		if i == 0:
-			Y[:, i] = obs.preimage(torch.mm(P, obs(x))).view(-1)
-		else:
-			x = Y[:, i-1].unsqueeze(1)
-			Y[:, i] = obs.preimage(torch.mm(P, obs(x))).view(-1)
-	return Y
-
 if __name__ == '__main__':
 	import systems.vdp as vdp
 	set_seed(9001)
 
-	def dmd_test(obs, X, Y, extrap=True):
+	def dmd_test(obs, X, Y):
 		PsiX, PsiY = obs(X), obs(Y)
 		P = dmd(PsiX, PsiY)
 		assert P.shape[0] == P.shape[1]
 
-		print('eDMD prediction')
-		Yp = obs.preimage(torch.mm(P, obs(X)))
-		print('prediction loss: ', (Yp - Y).norm().item())
 		plt.figure(figsize=(8,8))
 		plt.title('Original series')
 		plt.plot(Y[0], Y[1])
 		plt.figure(figsize=(8,8))
 		plt.title('eDMD prediction')
+		Yp = obs.preimage(torch.mm(P, obs(X)))
+		print('prediction loss: ', (Yp - Y).norm().item())
 		plt.plot(Yp[0], Yp[1])
-		if extrap:
-			plt.figure(figsize=(8,8))
-			plt.title('eDMD extrapolation')
-			Yp = extrapolate(P, X[:,0], obs, X.shape[1])
-			plt.plot(Yp[0], Yp[1])
+		plt.figure(figsize=(8,8))
+		plt.title('eDMD extrapolation')
+		Yp = obs.extrapolate(P, X, X.shape[1])
+		print('extrapolation loss: ', (Yp - Y).norm().item())
+		plt.plot(Yp[0], Yp[1])
 
 	print('eDMD test')
 	mu = 1
@@ -84,7 +58,7 @@ if __name__ == '__main__':
 	# obs = PolynomialObservable(p, d, k)
 	# dmd_test(obs, X, Y)
 	obs = DelayObservable(3)
-	dmd_test(obs, X, Y, extrap=False)
+	dmd_test(obs, X, Y)
 
 	print('kDMD test')
 	mu = 1
