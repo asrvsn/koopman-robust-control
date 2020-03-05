@@ -22,8 +22,8 @@ def edmd(X: torch.Tensor, Y: torch.Tensor, psi: Observable, operator='K'):
 def kdmd(X: torch.Tensor, Y: torch.Tensor, k: Kernel, epsilon=0, operator='K'):
 	X, Y = X.detach(), Y.detach() 
 	n, device = X.shape[0], X.device
-	G_XX = gramian(X, X, k)
-	G_XY = gramian(X, Y, k)
+	G_XX = k.gramian(X, X)
+	G_XY = k.gramian(X, Y)
 	if operator == 'K':
 		G_XY = G_XY.t()
 	P = torch.mm(torch.pinverse(G_XX + epsilon*torch.eye(n, device=device)), G_XY)

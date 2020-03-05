@@ -100,34 +100,30 @@ Kernels
 '''
 
 class Kernel:
-	def __init__(self, name: str):
-		self.name = name
+	def __init__(self):
+		pass
 
 class GaussianKernel(Kernel):
 	def __init__(self, sigma: float):
 		self.sigma = sigma
-		super().__init__('gaussian')
+	def gramian(self, X: torch.Tensor, Y: torch.Tensor):
+		return torch.exp(-torch.pow(torch.cdist(X, Y, p=2), 2)/(2*self.sigma**2))
 
 class LaplacianKernel(Kernel):
 	def __init__(self, sigma: float):
 		self.sigma = sigma
-		super().__init__('laplacian')
+	def gramian(self, X: torch.Tensor, Y: torch.Tensor):
+		return torch.exp(-torch.cdist(X, Y, p=2)/self.sigma)
 
 class PolyKernel(Kernel):
 	def __init__(self, c: float, p: int):
 		self.c, self.p = c, p
-		super().__init__('polynomial')
+	def gramian(self, X: torch.Tensor, Y: torch.Tensor):
+		return torch.pow(self.c + torch.mm(X.t(), Y), self.p)
 
-def gramian(X: torch.Tensor, Y: torch.Tensor, k: Kernel):
-	if k.name == 'gaussian':
-		return torch.exp(-torch.pow(torch.cdist(X, Y, p=2), 2)/(2*k.sigma**2))
-	elif k.name == 'laplacian':
-		return torch.exp(-torch.cdist(X, Y, p=2)/k.sigma)
-	elif k.name == 'polynomial':
-		return torch.pow(k.c + torch.mm(X.t(), Y), k.p)
-	# default linear kernel
-	else: 
-		return torch.mm(X.t(), Y)
+'''
+Tests
+'''
 
 if __name__ == '__main__': 
 	print('Poly obs. test')
