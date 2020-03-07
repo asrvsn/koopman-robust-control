@@ -1,7 +1,5 @@
 '''
-Algorithms for computing Perron-Frobenius operator.
-
-PyTorch adaptation of [d3s](https://github.com/sklus/d3s), Klus et al
+Algorithms for computing dynamical systems operators.
 '''
 import torch
 import numpy as np
@@ -10,7 +8,7 @@ import matplotlib.pyplot as plt
 from features import *
 from utils import set_seed
 
-def dmd(X: torch.Tensor, Y: torch.Tensor, operator='K'):
+def dmd(X: torch.Tensor, Y: torch.Tensor, operator='K', spectral_constraint=None):
 	X, Y = X.detach(), Y.detach() 
 	C_XX = torch.mm(X, X.t())
 	C_XY = torch.mm(X, Y.t())
@@ -29,12 +27,7 @@ def kdmd(X: torch.Tensor, Y: torch.Tensor, k: Kernel, epsilon=0, operator='K'):
 	return P
 
 def is_semistable(P: torch.Tensor, eps=1e-3):
-	# Kernel only valid for operators with eigenvalues on unit circle.
-	with torch.no_grad():
-		(eig, _) = torch.eig(P)
-		re, im = eig[:, 0], eig[:, 1]
-		norm = torch.sqrt(re.pow(2) + im.pow(2))
-		return (norm <= 1.0 + eps).all().item()
+	return torch.norm(P, p=2).item() <= 1.0 + eps
 
 if __name__ == '__main__':
 	import systems.vdp as vdp
@@ -43,6 +36,7 @@ if __name__ == '__main__':
 	def dmd_test(obs, X, Y):
 		PsiX, PsiY = obs(X), obs(Y)
 		P = dmd(PsiX, PsiY)
+		print('Spectral norm:', torch.norm(P, p=2).item())
 		assert P.shape[0] == P.shape[1]
 
 		plt.figure(figsize=(8,8))
@@ -50,8 +44,8 @@ if __name__ == '__main__':
 		plt.plot(Y[0], Y[1])
 		plt.figure(figsize=(8,8))
 		plt.title('eDMD prediction')
-		Yp = obs.preimage(torch.mm(P, obs(X)))
-		print('prediction loss: ', (Yp - Y).norm().item())
+		Yp = obs.preimage(torch.mm(P, PsiX))
+		# print('prediction loss: ', (Yp - Y).norm().item())
 		plt.plot(Yp[0], Yp[1])
 		plt.figure(figsize=(8,8))
 		plt.title('eDMD extrapolation')
@@ -60,13 +54,13 @@ if __name__ == '__main__':
 		plt.plot(Yp[0], Yp[1])
 
 	print('eDMD test')
-	mu = 1
-	X, Y = vdp.dataset(mu)
-	# p, d, k = 3, X.shape[0], 8
-	# obs = PolynomialObservable(p, d, k)
-	# dmd_test(obs, X, Y)
-	obs = DelayObservable(3)
+	mu = 2.0
+	X, Y = vdp.dataset(mu, n=10000)
+	p, d, k = 4, X.shape[0], 5
+	obs = PolynomialObservable(p, d, k)
 	dmd_test(obs, X, Y)
+	# obs = DelayObservable(10)
+	# dmd_test(obs, X, Y)
 
 	print('kDMD test')
 	mu = 1

@@ -14,19 +14,19 @@ torch.autograd.set_detect_anomaly(True)
 set_seed(9001)
 
 # Init features
-p, d, k = 4, 2, 5
+p, d, k = 3, 2, 5
 obs = PolynomialObservable(p, d, k)
 # tau = 10
 # obs = DelayObservable(tau) # Delay observable is not predictive, causes NaN
 
 # Init data
 mu = 2.0
-X, Y = vdp.dataset(mu, skip=200)
+X, Y = vdp.dataset(mu, n=2000, b=20)
 X, Y = X.to(device), Y.to(device)
 PsiX, PsiY = obs(X), obs(Y)
 
 # Initialize kernel
-d, m, T = PsiX.shape[0], 2, 12
+d, m, T = PsiX.shape[0], 2, 20
 K = PFKernel(device, d, m, T, use_sqrt=False)
 
 # Nominal operator
@@ -34,23 +34,30 @@ P0 = dmd(PsiX, PsiY)
 P0 = P0.to(device)
 # P0 /= torch.norm(P0, 2)
 assert not torch.isnan(P0).any().item()
-print('Op valid:', is_semistable(P0))
 
 # HMC
-
-pf_thresh = 1e-3
 
 baseline = False
 dist_func = (lambda x, y: torch.norm(x - y)) if baseline else (lambda x, y: K(x, y, normalize=True)) 
 
-potential = hmc.mk_potential(P0, dist_func, rate=100, pf_thresh=pf_thresh) # increase rate to tighten uncertainty radius
-samples, ratio = hmc.sample(10, potential, P0, step_size=.0001, pf_thresh=pf_thresh)
+U0, S0, V0 = torch.svd(P0)
+rate = torch.Tensor([100]).to(device)
+dist = torch.distributions.exponential.Exponential(rate)
+
+def potential(params: tuple):
+	(U, V) = params
+	P = torch.mm(torch.mm(U, torch.diag(S0)), V.t())
+	d_k = dist_func(P0, P)
+	print(d_k.item())
+	u = -dist.log_prob(d_k)
+	return u
+
+samples, ratio = hmc.sample(20, (U0, V0), potential, step_size=.00005)
+samples = [torch.mm(torch.mm(U, torch.diag(S0)), V.t()).detach() for (U, V) in samples]
 
 print('Acceptance ratio: ', ratio)
-(eig, _) = torch.eig(P0)
-print('Nominal spectral norm:', eig.max().item())
-print('Nominal valid:', is_semistable(P0, eps=pf_thresh))
-print('Perturbed valid:', [is_semistable(P, eps=pf_thresh) for P in samples])
+print('Nominal spectral norm:', torch.norm(P0, p=2).item())
+print('Perturbed spectral norms:', [torch.norm(P, p=2).item() for P in samples])
 
 # Save samples
 name = 'perturbed_baseline' if baseline else 'perturbed_pf' 
@@ -58,7 +65,7 @@ torch.save(torch.stack(samples), f'{name}.pt')
 
 # Visualize perturbations
 
-t = 5000
+t = 1000
 # t = X.shape[1]
 
 # plt.figure()
@@ -67,16 +74,18 @@ t = 5000
 # plt.plot(Z0[0], Z0[1])
 
 plt.figure()
-plt.title('Nominal extrapolation')
+plt.xlim(left=-4.0, right=4.0)
+plt.ylim(bottom=-4.0, top=4.0)
+plt.title(f'Perturbations of Van der Pol ({"baseline" if baseline else "kernel"})')
 Z0 = obs.extrapolate(P0, X, t).cpu()
-plt.plot(Z0[0], Z0[1])
+plt.plot(Z0[0], Z0[1], label='Nominal')
 
 for Pn in samples:
 	# Zn = obs.preimage(torch.mm(Pn, obs(X))).cpu()
-	Zn = pbs.extrapolate(Pn, X, t).cpu()
-	plt.figure()
-	plt.title('Perturbed extrapolation (Kernel distance)')
-	plt.plot(Zn[0], Zn[1])
+	Zn = obs.extrapolate(Pn, X, t).cpu()
+	plt.plot(Zn[0], Zn[1], color='orange')
+
+plt.legend()
 
 # for _ in range(3):
 # 	sigma = 0.1

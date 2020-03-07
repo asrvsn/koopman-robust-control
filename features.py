@@ -45,7 +45,7 @@ class DelayObservable(Observable):
 		Y = torch.full((X.shape[0], t), np.nan, device=X.device)
 		Y[:, 0:self.tau+1] = X[:, 0:self.tau+1]
 		for i in range(self.tau+1, t):
-			z = torch.flatten(Y[:, i-self.tau-1:i].t())
+			z = torch.flatten(Y[:, i-self.tau-1:i].t()).unsqueeze(1)
 			z = torch.mm(P, z).view(-1)
 			Y[:, i] = z[:d]
 		return Y
@@ -100,14 +100,12 @@ class PolynomialObservable(Observable):
 		return X[:self.d]
 
 	def extrapolate(self, P: torch.Tensor, X: torch.Tensor, t: int):
+		Y = torch.full((X.shape[0], t+1), np.nan, device=X.device)
+		Y[:, 0] = X[:, 0]
 		P, x = P.detach(), X[:,0].detach().unsqueeze(1)
-		Y = torch.full((X.shape[0], t), np.nan, device=X.device)
-		for i in range(t):
-			if i == 0:
-				Y[:, i] = obs.preimage(torch.mm(P, obs(x))).view(-1)
-			else:
-				x = Y[:, i-1].unsqueeze(1)
-				Y[:, i] = obs.preimage(torch.mm(P, obs(x))).view(-1)
+		for i in range(1, t+1):
+			x = Y[:, i-1].unsqueeze(1)
+			Y[:, i] = self.preimage(torch.mm(P, self(x))).view(-1)
 		return Y
 
 
