@@ -21,13 +21,14 @@ def hmc_step(params: tuple, momentum: tuple, potential: Callable, n_skip: int, s
 		return d_p
 
 	# TODO: check signs here
-	momentum = zip_with(momentum, params_grad(params), lambda m, dp: m + 0.5*step_size*dp)
+	momentum = zip_with(momentum, params_grad(params), lambda m, dp: m - 0.5*step_size*dp)
 
 	for n in range(n_skip):
 		params = zip_with(params, momentum, lambda p, m: p + step_size*m)
-		momentum = zip_with(momentum, params_grad(params), lambda m, dp: m + step_size*dp)
+		momentum = zip_with(momentum, params_grad(params), lambda m, dp: m - step_size*dp)
 
 	momentum = zip_with(momentum, params_grad(params), lambda m, dp: m - 0.5*step_size*dp)
+	momentum = map(lambda m: -m, momentum)
 	return params, momentum
 
 def accept(h_old: torch.Tensor, h_new: torch.Tensor):
