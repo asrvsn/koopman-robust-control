@@ -10,3 +10,5 @@ def set_seed(seed: int):
 
 def zip_with(X: tuple, Y: tuple, f: Callable):
 	return tuple(f(x,y) for (x,y) in zip(X, Y))
+
+# def inverse_eigdecomp_torch(V: )

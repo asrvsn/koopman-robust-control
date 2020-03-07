@@ -40,19 +40,30 @@ assert not torch.isnan(P0).any().item()
 baseline = False
 dist_func = (lambda x, y: torch.norm(x - y)) if baseline else (lambda x, y: K(x, y, normalize=True)) 
 
-U0, S0, V0 = torch.svd(P0)
-rate = 2.0
+# U0, S0, V0 = torch.svd(P0)
+
+# def potential(params: tuple):
+# 	(U, V) = params
+# 	P = torch.mm(torch.mm(U, torch.diag(S0)), V.t())
+# 	d_k = dist_func(P0, P)
+# 	print(d_k.item())
+# 	rate = 2.0
+# 	u = -torch.exp(-rate*d_k)
+# 	return u
+
+# samples, ratio = hmc.sample(20, (U0, V0), potential, step_size=.00002)
+# samples = [torch.mm(torch.mm(U, torch.diag(S0)), V.t()).detach() for (U, V) in samples]
 
 def potential(params: tuple):
-	(U, V) = params
-	P = torch.mm(torch.mm(U, torch.diag(S0)), V.t())
+	(P,) = params
 	d_k = dist_func(P0, P)
 	print(d_k.item())
+	rate = 3.0
 	u = -torch.exp(-rate*d_k)
 	return u
 
-samples, ratio = hmc.sample(20, (U0, V0), potential, step_size=.00002)
-samples = [torch.mm(torch.mm(U, torch.diag(S0)), V.t()).detach() for (U, V) in samples]
+samples, ratio = hmc.sample(20, (P0,), potential, n_skip=10, step_size=.00007)
+samples = [P.detach() for (P,) in samples]
 
 print('Acceptance ratio: ', ratio)
 print('Nominal spectral norm:', torch.norm(P0, p=2).item())
