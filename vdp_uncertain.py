@@ -38,21 +38,8 @@ assert not torch.isnan(P0).any().item()
 # HMC
 
 baseline = False
+s_max = torch.norm(P0, p=2) # boundary condition on spectral norm
 dist_func = (lambda x, y: torch.norm(x - y)) if baseline else (lambda x, y: K(x, y, normalize=True)) 
-
-# U0, S0, V0 = torch.svd(P0)
-
-# def potential(params: tuple):
-# 	(U, V) = params
-# 	P = torch.mm(torch.mm(U, torch.diag(S0)), V.t())
-# 	d_k = dist_func(P0, P)
-# 	print(d_k.item())
-# 	rate = 2.0
-# 	u = -torch.exp(-rate*d_k)
-# 	return u
-
-# samples, ratio = hmc.sample(20, (U0, V0), potential, step_size=.00002)
-# samples = [torch.mm(torch.mm(U, torch.diag(S0)), V.t()).detach() for (U, V) in samples]
 
 def potential(params: tuple):
 	(P,) = params
@@ -62,7 +49,21 @@ def potential(params: tuple):
 	u = -torch.exp(-rate*d_k)
 	return u
 
-samples, ratio = hmc.sample(20, (P0,), potential, n_skip=10, step_size=.00007)
+def boundary(params: tuple, momentum: tuple, step: float):
+	(P,) = params
+	(M,) = momentum
+	if torch.norm(P + step*M, p=2) > s_max:
+		micro_step = step/10
+		P_cand = P.detach()
+		while torch.norm(P_cand, p=2) <= s_max:
+			P_cand += micro_step*M
+		P_cand = P_cand.requires_grad_(True)
+		dS = -torch.autograd.grad(torch.norm(P_cand, p=2), P_cand)[0]
+		M_refl = torch.norm(M) * dS / torch.norm(dS) # reflected momentum
+		return ((P_cand,), (M_refl,))
+	return None
+
+samples, ratio = hmc.sample(10, (P0,), potential, boundary, n_leapfrog=10, step_size=.1)
 samples = [P.detach() for (P,) in samples]
 
 print('Acceptance ratio: ', ratio)
@@ -75,7 +76,7 @@ torch.save(torch.stack(samples), f'{name}.pt')
 
 # Visualize perturbations
 
-t = 1000
+t = 2000
 # t = X.shape[1]
 
 # plt.figure()
