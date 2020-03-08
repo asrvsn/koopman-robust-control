@@ -55,7 +55,7 @@ class PolynomialObservable(Observable):
 		# TODO: if k is too high, this procedure will loop forever
 
 		assert p > 0 and k > 0 
-		assert k > d, "Basis dimension must be larger than full state observable"
+		assert k >= d, "Basis dimension must be at least as large as full state observable"
 		self.d = d # dimension of input
 		self.p = p # max degree of polynomial
 		self.k = k # dimension of observable basis

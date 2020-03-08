@@ -14,7 +14,7 @@ torch.autograd.set_detect_anomaly(True)
 set_seed(9001)
 
 # Init features
-p, d, k = 3, 2, 5
+p, d, k = 4, 2, 8
 obs = PolynomialObservable(p, d, k)
 # tau = 10
 # obs = DelayObservable(tau) # Delay observable is not predictive, causes NaN
@@ -26,7 +26,7 @@ X, Y = X.to(device), Y.to(device)
 PsiX, PsiY = obs(X), obs(Y)
 
 # Initialize kernel
-d, m, T = PsiX.shape[0], 2, 20
+d, m, T = PsiX.shape[0], 2, 25
 K = PFKernel(device, d, m, T, use_sqrt=False)
 
 # Nominal operator
@@ -37,8 +37,9 @@ assert not torch.isnan(P0).any().item()
 
 # HMC
 
-baseline = False
-s_max = torch.norm(P0, p=2) # boundary condition on spectral norm
+baseline = True
+eig_max = torch.norm(P0, p=2) 
+s_max, s_min = eig_max + 1e-4, eig_max - 1e-4
 dist_func = (lambda x, y: torch.norm(x - y)) if baseline else (lambda x, y: K(x, y, normalize=True)) 
 
 def potential(params: tuple):
@@ -49,11 +50,12 @@ def potential(params: tuple):
 	u = -torch.exp(-rate*d_k)
 	return u
 
-def boundary(params: tuple, momentum: tuple, step: float):
+def boundary(params: tuple, momentum: tuple, step: float, resolution=10):
 	(P,) = params
 	(M,) = momentum
-	if torch.norm(P + step*M, p=2) > s_max:
-		micro_step = step/10
+	s = torch.norm(P + step*M, p=2)
+	if s > s_max:
+		micro_step = step/resolution
 		P_cand = P.detach()
 		while torch.norm(P_cand, p=2) <= s_max:
 			P_cand += micro_step*M
@@ -63,13 +65,24 @@ def boundary(params: tuple, momentum: tuple, step: float):
 		M_para = torch.trace(torch.mm(M.t(), dS)) * dS / torch.trace(torch.mm(dS.t(), dS))
 		M_refl = M - 2*M_para
 		return ((P_cand,), (M_refl,))
+	elif s < s_min:
+		micro_step = step/resolution
+		P_cand = P.detach()
+		while torch.norm(P_cand, p=2) >= s_min:
+			P_cand += micro_step*M
+		P_cand = P_cand.requires_grad_(True)
+		# Reflect along plane orthogonal to spectral gradient
+		dS = torch.autograd.grad(torch.norm(P_cand, p=2), P_cand)[0]
+		M_para = torch.trace(torch.mm(M.t(), dS)) * dS / torch.trace(torch.mm(dS.t(), dS))
+		M_refl = M - 2*M_para
+		return ((P_cand,), (M_refl,))
 	return None
 
-samples, ratio = hmc.sample(10, (P0,), potential, boundary, n_leapfrog=20, step_size=.01)
+samples, ratio = hmc.sample(10, (P0,), potential, boundary, n_leapfrog=200, step_size=.00001)
 samples = [P.detach() for (P,) in samples]
 
 print('Acceptance ratio: ', ratio)
-print('Nominal spectral norm:', torch.norm(P0, p=2).item())
+print('Nominal spectral norm:', eig_max.item())
 print('Perturbed spectral norms:', [torch.norm(P, p=2).item() for P in samples])
 
 # Save samples

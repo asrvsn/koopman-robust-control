@@ -25,11 +25,11 @@ def leapfrog(params: tuple, momentum: tuple, potential: Callable, boundary: Call
 	for n in range(n_leapfrog):
 
 		# Reflect particle until not in violation of boundary 
-		bc = boundary(params, momentum, step_size)
+		bc = boundary(params, momentum, step_size, resolution=20)
 		while bc is not None: 
 			print('Reflected!')
 			(params, momentum) = bc
-			bc = boundary(params, momentum, step_size)
+			bc = boundary(params, momentum, step_size, resolution=20)
 
 		params = zip_with(params, momentum, lambda p, m: p + step_size*m)
 		momentum = zip_with(momentum, params_grad(params), lambda m, dp: m - step_size*dp)
