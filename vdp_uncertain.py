@@ -58,12 +58,14 @@ def boundary(params: tuple, momentum: tuple, step: float):
 		while torch.norm(P_cand, p=2) <= s_max:
 			P_cand += micro_step*M
 		P_cand = P_cand.requires_grad_(True)
+		# Reflect along plane orthogonal to spectral gradient
 		dS = -torch.autograd.grad(torch.norm(P_cand, p=2), P_cand)[0]
-		M_refl = torch.norm(M) * dS / torch.norm(dS) # reflected momentum
+		M_para = torch.trace(torch.mm(M.t(), dS)) * dS / torch.trace(torch.mm(dS.t(), dS))
+		M_refl = M - 2*M_para
 		return ((P_cand,), (M_refl,))
 	return None
 
-samples, ratio = hmc.sample(10, (P0,), potential, boundary, n_leapfrog=10, step_size=.1)
+samples, ratio = hmc.sample(10, (P0,), potential, boundary, n_leapfrog=20, step_size=.01)
 samples = [P.detach() for (P,) in samples]
 
 print('Acceptance ratio: ', ratio)
