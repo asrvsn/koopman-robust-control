@@ -37,7 +37,7 @@ assert not torch.isnan(P0).any().item()
 
 # HMC
 
-baseline = True
+baseline = False
 eig_max = torch.norm(P0, p=2) 
 s_max, s_min = eig_max + 1e-3, eig_max - 1e-3
 dist_func = (lambda x, y: torch.norm(x - y)) if baseline else (lambda x, y: K(x, y, normalize=True)) 
@@ -103,8 +103,8 @@ t = 2000
 # plt.plot(Z0[0], Z0[1])
 
 plt.figure()
-plt.xlim(left=-4.0, right=4.0)
-plt.ylim(bottom=-4.0, top=4.0)
+plt.xlim(left=-6.0, right=6.0)
+plt.ylim(bottom=-6.0, top=6.0)
 plt.title(f'Perturbations of Van der Pol ({"baseline" if baseline else "kernel"})')
 Z0 = obs.extrapolate(P0, X, t).cpu()
 plt.plot(Z0[0], Z0[1], label='Nominal')
