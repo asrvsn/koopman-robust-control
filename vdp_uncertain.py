@@ -20,13 +20,13 @@ obs = PolynomialObservable(p, d, k)
 # obs = DelayObservable(tau) # Delay observable is not predictive, causes NaN
 
 # Init data
-mu = 2.0
+mu = 3.0
 X, Y = vdp.dataset(mu, n=2000, b=20)
 X, Y = X.to(device), Y.to(device)
 PsiX, PsiY = obs(X), obs(Y)
 
 # Initialize kernel
-d, m, T = PsiX.shape[0], 2, 25
+d, m, T = PsiX.shape[0], 2, 18
 K = PFKernel(device, d, m, T, use_sqrt=False)
 
 # Nominal operator
@@ -39,15 +39,18 @@ assert not torch.isnan(P0).any().item()
 
 baseline = True
 eig_max = torch.norm(P0, p=2) 
-s_max, s_min = eig_max + 1e-4, eig_max - 1e-4
+s_max, s_min = eig_max + 1e-3, eig_max - 1e-3
 dist_func = (lambda x, y: torch.norm(x - y)) if baseline else (lambda x, y: K(x, y, normalize=True)) 
+
+alpha, beta = 1, 8
+pdf = torch.distributions.beta.Beta(torch.Tensor([alpha]).to(device), torch.Tensor([beta]).to(device))
 
 def potential(params: tuple):
 	(P,) = params
-	d_k = dist_func(P0, P)
+	d_k = dist_func(P0, P).clamp(1e-6, 1-1e-6)
 	print(d_k.item())
-	rate = 3.0
-	u = -torch.exp(-rate*d_k)
+	rate = 10.0
+	u = -pdf.log_prob(d_k)
 	return u
 
 def boundary(params: tuple, momentum: tuple, step: float, resolution=10):
@@ -78,7 +81,7 @@ def boundary(params: tuple, momentum: tuple, step: float, resolution=10):
 		return ((P_cand,), (M_refl,))
 	return None
 
-samples, ratio = hmc.sample(10, (P0,), potential, boundary, n_leapfrog=200, step_size=.00001)
+samples, ratio = hmc.sample(10, (P0,), potential, boundary, n_leapfrog=50, step_size=.0001)
 samples = [P.detach() for (P,) in samples]
 
 print('Acceptance ratio: ', ratio)
