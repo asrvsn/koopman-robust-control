@@ -6,7 +6,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 from features import *
-from utils import set_seed
+from utils import *
 
 def dmd(X: torch.Tensor, Y: torch.Tensor, operator='K', spectral_constraint=None):
 	X, Y = X.detach(), Y.detach() 
@@ -38,7 +38,7 @@ if __name__ == '__main__':
 	def dmd_test(name, obs, X, Y):
 		PsiX, PsiY = obs(X), obs(Y)
 		P = dmd(PsiX, PsiY)
-		print('Spectral norm:', torch.norm(P, p=2).item())
+		print('Spectral radius:', spectral_radius(P))
 		assert P.shape[0] == P.shape[1]
 
 		plt.figure(figsize=(8,8))
@@ -63,12 +63,12 @@ if __name__ == '__main__':
 	dmd_test('VDP', obs, X, Y)
 
 	print('Duffing DMD test')
-	X, Y = duffing.dataset(400, 10000, gamma=0.37)
+	X, Y = duffing.dataset(80, 4000, gamma=0.0, x0=-1.0, xdot0=1.7)
 	# p, d, tau = 11, X.shape[0], 0
 	# obs1 = PolynomialObservable(p, d, 62)
 	# obs2 = DelayObservable(obs1.k, tau)
 	# obs = ComposedObservable([obs1, obs2])
-	p, d, k = 6, X.shape[0], 27
+	p, d, k = 5, X.shape[0], 10
 	obs = PolynomialObservable(p, d, k)
 	dmd_test('Duffing', obs, X, Y)
 

@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 from features import *
 from kernel import *
 from operators import *
-from utils import set_seed
+from utils import *
 import hmc as hmc
 import systems.duffing as duffing
 
@@ -14,13 +14,12 @@ torch.autograd.set_detect_anomaly(True)
 set_seed(9001)
 
 # Init features
-p, d, k = 6, 2, 27
+p, d, k = 5, 2, 10
 obs = PolynomialObservable(p, d, k)
-# tau = 10
-# obs = DelayObservable(tau) # Delay observable is not predictive, causes NaN
 
-# Init data
-X, Y = duffing.dataset(400, 10000, gamma=0.37)
+# Init data 
+x0, xdot0 = -1.0, 1.0
+X, Y = duffing.dataset(100, 10000, gamma=0.0, x0=x0, xdot0=xdot0) # unforced equation
 X, Y = X.to(device), Y.to(device)
 PsiX, PsiY = obs(X), obs(Y)
 
@@ -31,17 +30,16 @@ K = PFKernel(device, d, m, T, use_sqrt=False)
 # Nominal operator
 P0 = dmd(PsiX, PsiY)
 P0 = P0.to(device)
-# P0 /= torch.norm(P0, 2)
 assert not torch.isnan(P0).any().item()
 
 # HMC
 
 baseline = False
-eig_max = torch.norm(P0, p=2) 
-s_max, s_min = eig_max + 1e-3, eig_max - 1e-3
+eig_max = spectral_radius(P0) 
+s_max, s_min = eig_max, eig_max - 1e-2
 dist_func = (lambda x, y: torch.norm(x - y)) if baseline else (lambda x, y: K(x, y, normalize=True)) 
 
-alpha, beta = 1, 8
+alpha, beta = 1, 100
 pdf = torch.distributions.beta.Beta(torch.Tensor([alpha]).to(device), torch.Tensor([beta]).to(device))
 
 def potential(params: tuple):
@@ -54,37 +52,37 @@ def potential(params: tuple):
 def boundary(params: tuple, momentum: tuple, step: float, resolution=10):
 	(P,) = params
 	(M,) = momentum
-	s = torch.norm(P + step*M, p=2)
+	s = spectral_radius(P + step*M)
 	if s > s_max:
 		micro_step = step/resolution
 		P_cand = P.detach()
-		while torch.norm(P_cand, p=2) <= s_max:
+		while spectral_radius(P_cand) <= s_max:
 			P_cand += micro_step*M
 		P_cand = P_cand.requires_grad_(True)
 		# Reflect along plane orthogonal to spectral gradient
-		dS = -torch.autograd.grad(torch.norm(P_cand, p=2), P_cand)[0]
+		dS = -torch.autograd.grad(spectral_radius(P_cand), P_cand)[0]
 		M_para = torch.trace(torch.mm(M.t(), dS)) * dS / torch.trace(torch.mm(dS.t(), dS))
 		M_refl = M - 2*M_para
 		return ((P_cand,), (M_refl,))
 	elif s < s_min:
 		micro_step = step/resolution
 		P_cand = P.detach()
-		while torch.norm(P_cand, p=2) >= s_min:
+		while spectral_radius(P_cand) >= s_min:
 			P_cand += micro_step*M
 		P_cand = P_cand.requires_grad_(True)
 		# Reflect along plane orthogonal to spectral gradient
-		dS = torch.autograd.grad(torch.norm(P_cand, p=2), P_cand)[0]
+		dS = torch.autograd.grad(spectral_radius(P_cand), P_cand)[0]
 		M_para = torch.trace(torch.mm(M.t(), dS)) * dS / torch.trace(torch.mm(dS.t(), dS))
 		M_refl = M - 2*M_para
 		return ((P_cand,), (M_refl,))
 	return None
 
-samples, ratio = hmc.sample(10, (P0,), potential, boundary, n_leapfrog=50, step_size=.0001)
+samples, ratio = hmc.sample(10, (P0,), potential, boundary, n_leapfrog=25, step_size=.0001)
 samples = [P.detach() for (P,) in samples]
 
 print('Acceptance ratio: ', ratio)
 print('Nominal spectral norm:', eig_max.item())
-print('Perturbed spectral norms:', [torch.norm(P, p=2).item() for P in samples])
+print('Perturbed spectral norms:', [spectral_radius(P).item() for P in samples])
 
 # Save samples
 name = 'perturbed_baseline' if baseline else 'perturbed_pf' 
