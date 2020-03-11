@@ -31,36 +31,46 @@ def is_semistable(P: torch.Tensor, eps=1e-3):
 
 if __name__ == '__main__':
 	import systems.vdp as vdp
+	import systems.duffing as duffing
+
 	set_seed(9001)
 
-	def dmd_test(obs, X, Y):
+	def dmd_test(name, obs, X, Y):
 		PsiX, PsiY = obs(X), obs(Y)
 		P = dmd(PsiX, PsiY)
 		print('Spectral norm:', torch.norm(P, p=2).item())
 		assert P.shape[0] == P.shape[1]
 
 		plt.figure(figsize=(8,8))
-		plt.title('Original series')
+		plt.title(f'{name}: Original series')
 		plt.plot(Y[0], Y[1])
 		plt.figure(figsize=(8,8))
-		plt.title('eDMD prediction')
+		plt.title(f'{name}: eDMD prediction')
 		Yp = obs.preimage(torch.mm(P, PsiX))
 		# print('prediction loss: ', (Yp - Y).norm().item())
 		plt.plot(Yp[0], Yp[1])
 		plt.figure(figsize=(8,8))
-		plt.title('eDMD extrapolation')
+		plt.title(f'{name}: eDMD extrapolation')
 		Yp = obs.extrapolate(P, X, X.shape[1])
-		print('extrapolation loss: ', (Yp - Y).norm().item())
+		# print('extrapolation loss: ', (Yp - Y).norm().item())
 		plt.plot(Yp[0], Yp[1])
 
-	print('eDMD test')
+	print('VDP DMD test')
 	mu = 2.0
 	X, Y = vdp.dataset(mu, n=10000)
 	p, d, k = 4, X.shape[0], 5
 	obs = PolynomialObservable(p, d, k)
-	dmd_test(obs, X, Y)
-	# obs = DelayObservable(10)
-	# dmd_test(obs, X, Y)
+	dmd_test('VDP', obs, X, Y)
+
+	print('Duffing DMD test')
+	X, Y = duffing.dataset(400, 10000, gamma=0.37)
+	# p, d, tau = 11, X.shape[0], 0
+	# obs1 = PolynomialObservable(p, d, 62)
+	# obs2 = DelayObservable(obs1.k, tau)
+	# obs = ComposedObservable([obs1, obs2])
+	p, d, k = 6, X.shape[0], 27
+	obs = PolynomialObservable(p, d, k)
+	dmd_test('Duffing', obs, X, Y)
 
 	print('kDMD test')
 	mu = 1

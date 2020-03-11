@@ -9,7 +9,7 @@ def system(z, t, alpha, beta, gamma, delta, omega):
 	ydot = -delta*y - alpha*x - beta*(x**3) + gamma*np.cos(omega*t)
 	return xdot, ydot
 
-def dataset(tmax: int, n: int, alpha=-1.0, beta=1.0, gamma=8.0, delta=0.3, omega=1.2):
+def dataset(tmax: int, n: int, alpha=-1.0, beta=1.0, gamma=0.5, delta=0.3, omega=1.2):
 	x0, y0 = 1, 0
 	t = np.linspace(0, tmax, n)
 	f = odeint(system, (x0, y0), t, args=(alpha, beta, gamma, delta, omega))
@@ -18,7 +18,7 @@ def dataset(tmax: int, n: int, alpha=-1.0, beta=1.0, gamma=8.0, delta=0.3, omega
 
 if __name__ == '__main__': 
 	t, n = 80, 4000
-
+	
 	X, Y = dataset(t, n, gamma=0.2)
 	plt.figure(figsize=(8,8))
 	plt.title('Period-1 oscillation')

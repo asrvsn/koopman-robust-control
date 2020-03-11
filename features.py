@@ -10,45 +10,73 @@ Observables
 '''
 
 class Observable:
-	def __init__(self):
-		pass
+	def __init__(self, d: int, k: int, m: int):
+		'''
+		d: input (data) dimension
+		k: output (observable) dimension
+		m: data length (memory) required for making a single observation 
+
+		Base class is identity observable
+		'''
+		self.d = d 
+		self.k = k 
+		self.m = m
+
+	def __call__(self, X: torch.Tensor):
+		return X
+
+	def preimage(self, Y: torch.Tensor):
+		return Y
+
+	def extrapolate(self, P: torch.Tensor, X: torch.Tensor, t: int):
+		assert X.shape[0] == self.d, "dimension mismatch"
+		assert X.shape[1] >= self.m, "insufficient initial conditions provided"
+		Y = torch.full((self.d, t), np.nan, device=X.device)
+		Y[:, 0:self.m] = X[:, 0:self.m]
+		for i in range(self.m, t):
+			x = Y[:, i-self.m:i]
+			z = torch.mm(P, self(x))
+			y = self.preimage(z)
+			Y[:, i] = y.view(-1)
+		return Y
+
+class ComposedObservable(Observable):
+	def __init__(self, seq: list):
+		assert len(seq) > 0
+		self.seq = seq
+		d, k, m = seq[0].d, seq[-1].k, np.prod([obs.m for obs in seq])
+		super().__init__(d, k, m)
+
+	def __call__(self, X: torch.Tensor):
+		Z = X
+		for obs in self.seq:
+			Z = obs(Z)
+		return Z
+
+	def preimage(self, Z: torch.Tensor):
+		X = Z
+		for obs in reversed(self.seq):
+			X = obs.preimage(X)
+		return X
 
 class DelayObservable(Observable):
 	''' Delay-coordinate embedding '''
-	def __init__(self, tau: int):
+	def __init__(self, d: int, tau: int):
 		assert tau >= 0
 		self.tau = tau
+		k = (tau + 1) * d
+		m = self.tau + 1
+		super().__init__(d, k, m)
 
 	def __call__(self, X: torch.Tensor):
-		assert X.shape[1] >= self.tau + 1
-		n = X.shape[1] - self.tau
-		d = (self.tau + 1) * X.shape[0]
-		Y = torch.empty((d, n), device=X.device)
-		for i in range(n):
-			Y[:,i] = torch.flatten(X[:,i:i+self.tau+1].t())
-		return Y
+		n = X.shape[1]
+		assert n >= self.tau + 1
+		Xs = tuple(X[:, i:n-self.tau+i] for i in range(self.tau+1))
+		Z = torch.cat(Xs, 0)
+		return Z
 
-	def preimage(self, Y: torch.Tensor):
-		d = int(Y.shape[0] / (self.tau + 1))
-		n = Y.shape[1] + self.tau 
-		X = torch.empty((d, n), device=Y.device)
-		for i in range(Y.shape[1]):
-			X[:, i] = Y[:d, i]
-		for j in range(1, self.tau+1):
-			i = Y.shape[1] + j - 1
-			X[:, i] = Y[j*d:(j+1)*d, -1]
-		return X
-
-	def extrapolate(self, P: torch.Tensor, X: torch.Tensor, t: int):
-		d = X.shape[0]
-		P = P.detach()
-		Y = torch.full((X.shape[0], t), np.nan, device=X.device)
-		Y[:, 0:self.tau+1] = X[:, 0:self.tau+1]
-		for i in range(self.tau+1, t):
-			z = torch.flatten(Y[:, i-self.tau-1:i].t()).unsqueeze(1)
-			z = torch.mm(P, z).view(-1)
-			Y[:, i] = z[:d]
-		return Y
+	def preimage(self, Z: torch.Tensor):
+		return Z[:self.d]
 
 class PolynomialObservable(Observable):
 	def __init__(self, p: int, d: int, k: int):
@@ -56,9 +84,7 @@ class PolynomialObservable(Observable):
 
 		assert p > 0 and k > 0 
 		assert k >= d, "Basis dimension must be at least as large as full state observable"
-		self.d = d # dimension of input
 		self.p = p # max degree of polynomial
-		self.k = k # dimension of observable basis
 		self.psi = dict()
 
 		# full state observable
@@ -85,29 +111,20 @@ class PolynomialObservable(Observable):
 			if key not in self.psi: # sample without replacement
 				self.psi[key] = None
 
+		super().__init__(d, k, 1)
+
 	def __call__(self, X: torch.Tensor):
-		with torch.no_grad():
-			Z = torch.empty((self.k, X.shape[1]), device=X.device)
-			for i, key in enumerate(self.psi.keys()):
-				z = torch.ones((X.shape[1],), device=X.device)
-				for term, power in enumerate(key):
-					if power > 0:
-						z *= torch.pow(X[term], power)
-				Z[i] = z
-			return Z
+		Z = torch.empty((self.k, X.shape[1]), device=X.device)
+		for i, key in enumerate(self.psi.keys()):
+			z = torch.ones((X.shape[1],), device=X.device)
+			for term, power in enumerate(key):
+				if power > 0:
+					z *= torch.pow(X[term], power)
+			Z[i] = z
+		return Z
 
-	def preimage(self, X: torch.Tensor): 
-		return X[:self.d]
-
-	def extrapolate(self, P: torch.Tensor, X: torch.Tensor, t: int):
-		Y = torch.full((X.shape[0], t+1), np.nan, device=X.device)
-		Y[:, 0] = X[:, 0]
-		P, x = P.detach(), X[:,0].detach().unsqueeze(1)
-		for i in range(1, t+1):
-			x = Y[:, i-1].unsqueeze(1)
-			Y[:, i] = self.preimage(torch.mm(P, self(x))).view(-1)
-		return Y
-
+	def preimage(self, Z: torch.Tensor): 
+		return Z[:self.d]
 
 class GaussianObservable(Observable):
 	def __init__(self, sigma: float):
@@ -158,11 +175,25 @@ if __name__ == '__main__':
 	assert (X == Z).all().item(), 'poly preimage incorrect'
 
 	print('Delay obs. test')
-	obs = DelayObservable(2)
-	X = torch.Tensor([[i*x for x in range(3)] for i in range(1, 6)]).t()
+	d, tau, n = 3, 3, 6
+	obs = DelayObservable(d, tau)
+	X = torch.Tensor([[i*x for x in range(d)] for i in range(1, n+1)]).t()
 	print('X: ', X)
 	Y = obs(X)
 	print('Y: ', Y)
 	Z = obs.preimage(Y)
 	print('Z: ', Z)
-	assert (X == Z).all().item(), 'delay preimage incorrect'
+	assert (X[:, :Z.shape[1]] == Z).all().item(), 'delay preimage incorrect'
+
+	# print('Composed obs. test')
+	# p, d, k, tau = 3, 5, 20, 2
+	# obs1 = PolynomialObservable(p, d, k)
+	# obs2 = DelayObservable(d, tau)
+	# obs = ComposedObservable([obs1, obs2])
+	# X = torch.Tensor([[i*x for x in range(d)] for i in range(1, 10)]).t()
+	# print(X)
+	# Y = obs(X)
+	# print(Y)
+	# Z = obs.preimage(Y)
+	# print(Z)
+	# assert (X == Z).all().item(), 'composed preimage incorrect'

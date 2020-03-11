@@ -6,7 +6,7 @@ from kernel import *
 from operators import *
 from utils import set_seed
 import hmc as hmc
-import systems.vdp as vdp
+import systems.duffing as duffing
 
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 torch.autograd.set_detect_anomaly(True)
@@ -14,14 +14,13 @@ torch.autograd.set_detect_anomaly(True)
 set_seed(9001)
 
 # Init features
-p, d, k = 4, 2, 8
+p, d, k = 6, 2, 27
 obs = PolynomialObservable(p, d, k)
 # tau = 10
 # obs = DelayObservable(tau) # Delay observable is not predictive, causes NaN
 
 # Init data
-mu = 3.0
-X, Y = vdp.dataset(mu, n=2000, b=20)
+X, Y = duffing.dataset(400, 10000, gamma=0.37)
 X, Y = X.to(device), Y.to(device)
 PsiX, PsiY = obs(X), obs(Y)
 
@@ -89,22 +88,19 @@ print('Perturbed spectral norms:', [torch.norm(P, p=2).item() for P in samples])
 
 # Save samples
 name = 'perturbed_baseline' if baseline else 'perturbed_pf' 
-torch.save(torch.stack(samples), f'tensors/{name}_vdp.pt')
+torch.save(torch.stack(samples), f'tensors/{name}_duffing.pt')
 
 # Visualize perturbations
 
 t = 2000
 # t = X.shape[1]
 
-# plt.figure()
-# plt.title('Nominal prediction')
-# Z0 = obs.preimage(torch.mm(P0, obs(X))).cpu()
-# plt.plot(Z0[0], Z0[1])
-
 plt.figure()
-plt.xlim(left=-6.0, right=6.0)
-plt.ylim(bottom=-6.0, top=6.0)
-plt.title(f'Perturbations of Van der Pol ({"baseline" if baseline else "kernel"})')
+xbound, ybound = 2, 2
+plt.xlim(left=-xbound, right=xbound)
+plt.ylim(bottom=-ybound, top=ybound)
+plt.title(f'Perturbations of Duffing oscillator ({"baseline" if baseline else "kernel"})')
+# Z0 = obs.preimage(torch.mm(P0, obs(X))).cpu()
 Z0 = obs.extrapolate(P0, X, t).cpu()
 plt.plot(Z0[0], Z0[1], label='Nominal')
 
