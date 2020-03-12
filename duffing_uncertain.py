@@ -20,7 +20,7 @@ obs = PolynomialObservable(p, d, k)
 # Init data 
 t_max = 400
 n_per = 16000
-n_init = 4
+n_init = 11
 x0s = np.linspace(-2.0, 2.0, n_init)
 xdot0s = np.linspace(-2.0, 2.0, n_init)
 X, Y = [], []
@@ -103,7 +103,7 @@ print('Perturbed spectral radii:', [spectral_radius(P).item() for P in samples])
 
 # Visualize perturbations
 
-t = 2000
+t = 800
 
 def get_label(z):
 	if z[0] > -1.5 and z[0] < -0.5 and z[1] > -0.5 and z[1] < 0.5:
@@ -123,24 +123,26 @@ for x0 in x0s:
 		x = torch.Tensor([[x0], [xdot0]]).to(device)
 		Z0 = obs.extrapolate(P0, x, t).cpu()
 		label, color = get_label(Z0[:, -1])
-		plt.plot(Z0[0], Z0[1], label=label, color=color)
+		if label != 'Unstable':
+			plt.plot(Z0[0], Z0[1], label=label, color=color)
 
 deduped_legend()
 
-plt.figure()
-xbound, ybound = 2.2, 2.2
-plt.xlim(left=-xbound, right=xbound)
-plt.ylim(bottom=-ybound, top=ybound)
-plt.title(f'Perturbed extrapolations of Duffing oscillator ({"Frobenius distance" if baseline else "P-F distance"})')
 for Pn in samples:
+	plt.figure()
+	xbound, ybound = 2.2, 2.2
+	plt.xlim(left=-xbound, right=xbound)
+	plt.ylim(bottom=-ybound, top=ybound)
+	plt.title(f'Perturbed extrapolations of Duffing oscillator ({"Frobenius distance" if baseline else "P-F distance"})')
 	for x0 in x0s:
 		for xdot0 in xdot0s:
 			x = torch.Tensor([[x0], [xdot0]]).to(device)
 			Zn = obs.extrapolate(Pn, x, t).cpu()
 			label, color = get_label(Zn[:, -1])
-			plt.plot(Zn[0], Zn[1], label=label, color=color)
+			if label != 'Unstable':
+				plt.plot(Zn[0], Zn[1], label=label, color=color)
 
-deduped_legend()
+	deduped_legend()
 
 plt.show()
 
