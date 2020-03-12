@@ -14,12 +14,24 @@ torch.autograd.set_detect_anomaly(True)
 set_seed(9001)
 
 # Init features
-p, d, k = 5, 2, 10
+p, d, k = 5, 2, 15
 obs = PolynomialObservable(p, d, k)
 
 # Init data 
-x0, xdot0 = -1.0, 1.0
-X, Y = duffing.dataset(100, 10000, gamma=0.0, x0=x0, xdot0=xdot0) # unforced equation
+t_max = 400
+n_per = 16000
+n_init = 4
+x0s = np.linspace(-2.0, 2.0, n_init)
+xdot0s = np.linspace(-2.0, 2.0, n_init)
+X, Y = [], []
+for x0 in x0s:
+	for xdot0 in xdot0s:
+		# Unforced duffing equation
+		Xi, Yi = duffing.dataset(t_max, n_per, gamma=0.0, x0=x0, xdot0=xdot0)
+		X.append(Xi)
+		Y.append(Yi)
+X, Y = torch.cat(tuple(X), axis=1), torch.cat(tuple(Y), axis=1)
+
 X, Y = X.to(device), Y.to(device)
 PsiX, PsiY = obs(X), obs(Y)
 
@@ -36,17 +48,17 @@ assert not torch.isnan(P0).any().item()
 
 baseline = False
 eig_max = spectral_radius(P0) 
-s_max, s_min = eig_max, eig_max - 1e-2
+s_max, s_min = eig_max + 1e-3, eig_max - 1e-3
 dist_func = (lambda x, y: torch.norm(x - y)) if baseline else (lambda x, y: K(x, y, normalize=True)) 
 
-alpha, beta = 1, 100
+alpha, beta = 1, 80
 pdf = torch.distributions.beta.Beta(torch.Tensor([alpha]).to(device), torch.Tensor([beta]).to(device))
 
 def potential(params: tuple):
 	(P,) = params
 	d_k = dist_func(P0, P).clamp(1e-6, 1-1e-6)
 	print(d_k.item())
-	u = -pdf.log_prob(d_k)
+	u = pdf.log_prob(d_k)
 	return u
 
 def boundary(params: tuple, momentum: tuple, step: float, resolution=10):
@@ -77,47 +89,58 @@ def boundary(params: tuple, momentum: tuple, step: float, resolution=10):
 		return ((P_cand,), (M_refl,))
 	return None
 
-samples, ratio = hmc.sample(10, (P0,), potential, boundary, n_leapfrog=25, step_size=.0001)
-samples = [P.detach() for (P,) in samples]
+n_samples = 6
+samples, ratio = hmc.sample(n_samples, (P0,), potential, boundary, n_burn=20, n_leapfrog=25, step_size=.00001)
+samples = [P for (P,) in samples]
 
 print('Acceptance ratio: ', ratio)
-print('Nominal spectral norm:', eig_max.item())
-print('Perturbed spectral norms:', [spectral_radius(P).item() for P in samples])
+print('Nominal spectral radius:', eig_max.item())
+print('Perturbed spectral radii:', [spectral_radius(P).item() for P in samples])
 
 # Save samples
-name = 'perturbed_baseline' if baseline else 'perturbed_pf' 
-torch.save(torch.stack(samples), f'tensors/{name}_duffing.pt')
+# name = 'perturbed_baseline' if baseline else 'perturbed_pf' 
+# torch.save(torch.stack(samples), f'tensors/{name}_duffing.pt')
 
 # Visualize perturbations
 
 t = 2000
-# t = X.shape[1]
+
+def get_label(z):
+	if z[0] > -1.5 and z[0] < -0.5 and z[1] > -0.5 and z[1] < 0.5:
+		return 'Left', 'red'
+	elif z[0] > 0.5 and z[0] < 1.5 and z[1] > -0.5 and z[1] < 0.5:
+		return 'Right', 'blue'
+	else:
+		return 'Unstable', 'grey'
 
 plt.figure()
-xbound, ybound = 2, 2
+xbound, ybound = 2.2, 2.2
 plt.xlim(left=-xbound, right=xbound)
 plt.ylim(bottom=-ybound, top=ybound)
-plt.title(f'Perturbations of Duffing oscillator ({"baseline" if baseline else "kernel"})')
-# Z0 = obs.preimage(torch.mm(P0, obs(X))).cpu()
-Z0 = obs.extrapolate(P0, X, t).cpu()
-plt.plot(Z0[0], Z0[1], label='Nominal')
+plt.title('Nominal extrapolation of Duffing Oscillator')
+for x0 in x0s:
+	for xdot0 in xdot0s:
+		x = torch.Tensor([[x0], [xdot0]]).to(device)
+		Z0 = obs.extrapolate(P0, x, t).cpu()
+		label, color = get_label(Z0[:, -1])
+		plt.plot(Z0[0], Z0[1], label=label, color=color)
 
+deduped_legend()
+
+plt.figure()
+xbound, ybound = 2.2, 2.2
+plt.xlim(left=-xbound, right=xbound)
+plt.ylim(bottom=-ybound, top=ybound)
+plt.title(f'Perturbed extrapolations of Duffing oscillator ({"Frobenius distance" if baseline else "P-F distance"})')
 for Pn in samples:
-	# Zn = obs.preimage(torch.mm(Pn, obs(X))).cpu()
-	Zn = obs.extrapolate(Pn, X, t).cpu()
-	plt.plot(Zn[0], Zn[1], color='orange')
+	for x0 in x0s:
+		for xdot0 in xdot0s:
+			x = torch.Tensor([[x0], [xdot0]]).to(device)
+			Zn = obs.extrapolate(Pn, x, t).cpu()
+			label, color = get_label(Zn[:, -1])
+			plt.plot(Zn[0], Zn[1], label=label, color=color)
 
-plt.legend()
-
-# for _ in range(3):
-# 	sigma = 0.1
-# 	eps = torch.distributions.Normal(torch.zeros_like(P0, device=device), torch.full(P0.shape, sigma, device=device)).sample()
-# 	Pn = P0 + eps
-# 	# Zn = obs.preimage(torch.mm(Pn, obs(X))).cpu()
-# 	Zn = extrapolate(Pn, x_0, obs, t).cpu()
-# 	plt.figure()
-# 	plt.title('Perturbed extrapolation (Fro distance)')
-# 	plt.plot(Zn[0], Zn[1])
+deduped_legend()
 
 plt.show()
 

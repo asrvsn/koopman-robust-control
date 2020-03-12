@@ -63,12 +63,12 @@ if __name__ == '__main__':
 	dmd_test('VDP', obs, X, Y)
 
 	print('Duffing DMD test')
-	X, Y = duffing.dataset(80, 4000, gamma=0.0, x0=-1.0, xdot0=1.7)
+	X, Y = duffing.dataset(80, 4000, gamma=0.0, x0=2.0, xdot0=2.0)
 	# p, d, tau = 11, X.shape[0], 0
 	# obs1 = PolynomialObservable(p, d, 62)
 	# obs2 = DelayObservable(obs1.k, tau)
 	# obs = ComposedObservable([obs1, obs2])
-	p, d, k = 5, X.shape[0], 10
+	p, d, k = 5, X.shape[0], 15
 	obs = PolynomialObservable(p, d, k)
 	dmd_test('Duffing', obs, X, Y)
 

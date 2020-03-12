@@ -35,7 +35,7 @@ def leapfrog(params: tuple, momentum: tuple, potential: Callable, boundary: Call
 		momentum = zip_with(momentum, params_grad(params), lambda m, dp: m - step_size*dp)
 
 	momentum = zip_with(momentum, params_grad(params), lambda m, dp: m - 0.5*step_size*dp)
-	# momentum = map(lambda m: -m, momentum)
+	momentum = map(lambda m: -m, momentum)
 	return params, momentum
 
 def accept(h_old: torch.Tensor, h_new: torch.Tensor):
@@ -67,6 +67,7 @@ def sample(n_samples: int, init_params: tuple, potential: Callable, boundary: Ca
 		n += 1
 
 	ratio = len(ret_params) / (n - n_burn)
+	ret_params = list(map(lambda p: tuple(map(lambda x: x.detach(), p)), ret_params))
 	return ret_params, ratio
 
 
