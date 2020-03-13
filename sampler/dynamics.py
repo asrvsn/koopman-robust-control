@@ -41,7 +41,7 @@ def perturb(n_samples: int, P0: torch.Tensor, dist_func: Callable, beta: float, 
 				P_cand += micro_step*M
 			P_cand = P_cand.requires_grad_(True)
 			# Reflect along plane orthogonal to spectral gradient
-			dS = -torch.autograd.grad(spectral_radius(P_cand), P_cand)[0]
+			dS = torch.autograd.grad(spectral_radius(P_cand), P_cand)[0]
 			M_para = torch.trace(torch.mm(M.t(), dS)) * dS / torch.trace(torch.mm(dS.t(), dS))
 			M_refl = M - 2*M_para
 			return ((P_cand,), (M_refl,))
@@ -52,7 +52,7 @@ def perturb(n_samples: int, P0: torch.Tensor, dist_func: Callable, beta: float, 
 				P_cand += micro_step*M
 			P_cand = P_cand.requires_grad_(True)
 			# Reflect along plane orthogonal to spectral gradient
-			dS = torch.autograd.grad(spectral_radius(P_cand), P_cand)[0]
+			dS = -torch.autograd.grad(spectral_radius(P_cand), P_cand)[0]
 			M_para = torch.trace(torch.mm(M.t(), dS)) * dS / torch.trace(torch.mm(dS.t(), dS))
 			M_refl = M - 2*M_para
 			return ((P_cand,), (M_refl,))
