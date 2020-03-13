@@ -13,11 +13,13 @@ def gibbs(params: tuple):
 	distributions = tuple(torch.distributions.Normal(torch.zeros_like(w), torch.ones_like(w)) for w in params)
 	return tuple(d.sample() for d in distributions)
 
-def leapfrog(params: tuple, momentum: tuple, potential: Callable, boundary: Callable, n_leapfrog: int, step_size: float):
+def leapfrog(params: tuple, momentum: tuple, potential: Callable, boundary: Callable, n_leapfrog: int, step_size: float, zero_nan=True):
 	def params_grad(p):
 		p = tuple(w.detach().requires_grad_() for w in p)
 		u = potential(p)
 		d_p = torch.autograd.grad(u, p)
+		if zero_nan: 
+			d_p = tuple(torch.zeros_like(dw) if torch.isnan(dw).any() else dw for dw in d_p)
 		return d_p
 
 	momentum = zip_with(momentum, params_grad(params), lambda m, dp: m - 0.5*step_size*dp)
@@ -25,11 +27,11 @@ def leapfrog(params: tuple, momentum: tuple, potential: Callable, boundary: Call
 	for n in range(n_leapfrog):
 
 		# Reflect particle until not in violation of boundary 
-		bc = boundary(params, momentum, step_size, resolution=20)
+		bc = boundary(params, momentum, step_size)
 		while bc is not None: 
 			print('Reflected!')
 			(params, momentum) = bc
-			bc = boundary(params, momentum, step_size, resolution=20)
+			bc = boundary(params, momentum, step_size)
 
 		params = zip_with(params, momentum, lambda p, m: p + step_size*m)
 		momentum = zip_with(momentum, params_grad(params), lambda m, dp: m - step_size*dp)

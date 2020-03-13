@@ -16,7 +16,7 @@ def zip_with(X: tuple, Y: tuple, f: Callable):
 def eig(A, v):
 	return torch.mm(v.t(), torch.mm(A, v))
 
-def spectral_radius(A: torch.Tensor, eps=1e-3):
+def spectral_radius(A: torch.Tensor, eps=1e-6):
 	d = A.shape[0]
 	v = torch.ones((d,1), device=A.device) / np.sqrt(d)
 	ev = eig(A, v)

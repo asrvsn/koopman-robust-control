@@ -9,12 +9,13 @@ def system(mu: float):
 def dataset(mu: float, a=0, b=10, n=500, skip=0):
 	t = linspace(a, b, n)
 	sol = solve_ivp(system(mu), [a, b], [1, 0], t_eval=t)
-	X, Y = sol.y[:, skip:-1], sol.y[:, skip+1:] # returns: d x n 
+	X, Y = sol.y[:, skip:-1], sol.y[:, skip+1:] 
 	return torch.from_numpy(X).float(), torch.from_numpy(Y).float()
 
 if __name__ == '__main__':
 	mu = 3
-	X, Y = dataset(mu)
+
+	X, Y = dataset(mu, b=20, n=2000, skip=400)
 	print(X.shape, Y.shape)
 	plt.figure(figsize=(8,8))
 	plt.plot(X[0], X[1])
