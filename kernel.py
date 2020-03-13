@@ -26,7 +26,6 @@ class PFKernel:
 	def __call__(self, P1: torch.Tensor, P2: torch.Tensor, normalize=False):
 		# P1, P2 must be square and same shape
 		# assert P1.shape == (self.d, self.d) and P2.shape == P1.shape
-		eps = 1e-6
 		if normalize:
 			if self.use_sqrt:
 				return torch.sqrt(1 - self.__call__(P1, P2).pow(2) / (self.__call__(P1, P1) * self.__call__(P2, P2)))

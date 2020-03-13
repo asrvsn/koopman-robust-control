@@ -24,7 +24,7 @@ X, Y = X.to(device), Y.to(device)
 PsiX, PsiY = obs(X), obs(Y)
 
 # Initialize kernel
-d, m, T = PsiX.shape[0], 2, 18
+d, m, T = PsiX.shape[0], 2, 6
 K = PFKernel(device, d, m, T, use_sqrt=False)
 
 # Nominal operator
@@ -35,14 +35,14 @@ assert not torch.isnan(P0).any().item()
 # Sample dynamics
 
 baseline = False
-beta = 20
+beta = 200
 dist_func = euclidean_matrix_kernel if baseline else (lambda x, y: K(x, y, normalize=True)) 
 
 samples = perturb(
 	25, P0, dist_func, beta,  
-	sp_div=(1e-3, 1e-3),
-	hmc_step=1e-6,
-	hmc_leapfrog=10,
+	sp_div=(0, 1e-3),
+	hmc_step=1e-5,
+	hmc_leapfrog=30,
 )
 
 # Save samples
