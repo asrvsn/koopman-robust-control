@@ -15,10 +15,9 @@ def dataset(mu: float, a=0, b=10, n=500, skip=0):
 if __name__ == '__main__':
 	mu = 3
 
-	X, Y = dataset(mu, b=20, n=2000, skip=400)
+	X, Y = dataset(mu, b=20, n=8000, skip=3500)
 	print(X.shape, Y.shape)
 	plt.figure(figsize=(8,8))
 	plt.plot(X[0], X[1])
-	plt.figure(figsize=(8,8))
-	plt.plot(Y[0], Y[1])
+	plt.plot([X[0][0]], [X[1][0]], marker='o', color='red')
 	plt.show()

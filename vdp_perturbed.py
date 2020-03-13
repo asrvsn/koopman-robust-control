@@ -19,7 +19,7 @@ obs = PolynomialObservable(p, d, k)
 
 # Init data
 mu = 3.0
-X, Y = vdp.dataset(mu, n=8000, b=20) # start on limit cycle
+X, Y = vdp.dataset(mu, n=16000, b=40, skip=3500) # start on limit cycle
 X, Y = X.to(device), Y.to(device)
 PsiX, PsiY = obs(X), obs(Y)
 
@@ -35,14 +35,14 @@ assert not torch.isnan(P0).any().item()
 # Sample dynamics
 
 baseline = False
-beta = 100
-dist_func = (lambda x, y: torch.norm(x - y)) if baseline else (lambda x, y: K(x, y, normalize=True)) 
+beta = 20
+dist_func = euclidean_matrix_kernel if baseline else (lambda x, y: K(x, y, normalize=True)) 
 
 samples = perturb(
-	10, P0, dist_func, beta,  
+	25, P0, dist_func, beta,  
 	sp_div=(1e-3, 1e-3),
-	hmc_step=1e-4,
-	hmc_leapfrog=25,
+	hmc_step=1e-6,
+	hmc_leapfrog=10,
 )
 
 # Save samples
@@ -54,17 +54,36 @@ torch.save(torch.stack(samples), f'tensors/{name}_vdp.pt')
 
 t = 8000
 
+X = X.cpu()
+
 plt.figure()
+for Pn in samples:
+	Zn = obs.extrapolate(Pn.cpu(), X, t)
+	plt.plot(Zn[0], Zn[1], color='grey', alpha=0.3)
+
 plt.xlim(left=-6.0, right=6.0)
 plt.ylim(bottom=-6.0, top=6.0)
-plt.title(f'Perturbations of Van der Pol ({"baseline" if baseline else "kernel"})')
-Z0 = obs.extrapolate(P0.cpu(), X.cpu(), t)
+# plt.title(f'Perturbations of Van der Pol ({"baseline" if baseline else "kernel"})')
+Z0 = obs.extrapolate(P0.cpu(), X, t)
 plt.plot(Z0[0], Z0[1], label='Nominal')
 
-for Pn in samples:
-	Zn = obs.extrapolate(Pn.cpu(), X.cpu(), t)
-	plt.plot(Zn[0], Zn[1], color='orange')
+plt.plot([X[0][0]], [X[1][0]], marker='o', color='blue')
+plt.legend()
 
+t = 300
+
+plt.figure()
+for Pn in samples:
+	Zn = obs.extrapolate(Pn.cpu(), X, t+50)
+	plt.plot(Zn[0], Zn[1], color='grey', alpha=0.3)
+
+plt.xlim(left=X[0][t], right=X[0][0] + 0.05)
+plt.ylim(bottom=X[1][t], top=X[1][0] + 0.05)
+# plt.title(f'Perturbations of Van der Pol ({"baseline" if baseline else "kernel"})')
+Z0 = obs.extrapolate(P0.cpu(), X, t+50)
+plt.plot(Z0[0], Z0[1], label='Nominal')
+
+plt.plot([X[0][0]], [X[1][0]], marker='o', color='blue')
 plt.legend()
 
 plt.show()

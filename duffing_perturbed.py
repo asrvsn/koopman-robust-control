@@ -49,7 +49,7 @@ assert not torch.isnan(P0).any().item()
 baseline = False
 eig_max = spectral_radius(P0) 
 s_max, s_min = eig_max + 1e-3, eig_max - 1e-3
-dist_func = (lambda x, y: torch.norm(x - y)) if baseline else (lambda x, y: K(x, y, normalize=True)) 
+dist_func = euclidean_matrix_kernel if baseline else (lambda x, y: K(x, y, normalize=True)) 
 
 alpha, beta = 1, 80
 pdf = torch.distributions.beta.Beta(torch.Tensor([alpha]).to(device), torch.Tensor([beta]).to(device))

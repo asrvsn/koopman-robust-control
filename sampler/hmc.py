@@ -13,7 +13,7 @@ def gibbs(params: tuple):
 	distributions = tuple(torch.distributions.Normal(torch.zeros_like(w), torch.ones_like(w)) for w in params)
 	return tuple(d.sample() for d in distributions)
 
-def leapfrog(params: tuple, momentum: tuple, potential: Callable, boundary: Callable, n_leapfrog: int, step_size: float, zero_nan=True):
+def leapfrog(params: tuple, momentum: tuple, potential: Callable, boundary: Callable, n_leapfrog: int, step_size: float, zero_nan=False):
 	def params_grad(p):
 		p = tuple(w.detach().requires_grad_() for w in p)
 		u = potential(p)
@@ -37,7 +37,7 @@ def leapfrog(params: tuple, momentum: tuple, potential: Callable, boundary: Call
 		momentum = zip_with(momentum, params_grad(params), lambda m, dp: m - step_size*dp)
 
 	momentum = zip_with(momentum, params_grad(params), lambda m, dp: m - 0.5*step_size*dp)
-	momentum = map(lambda m: -m, momentum)
+	# momentum = map(lambda m: -m, momentum)
 	return params, momentum
 
 def accept(h_old: torch.Tensor, h_new: torch.Tensor):
