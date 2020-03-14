@@ -2,7 +2,7 @@ import torch
 from operators import is_semistable
 
 class PFKernel:
-	def __init__(self, device: torch.device, d: int, m: int, T: int, use_sqrt=True):
+	def __init__(self, device: torch.device, d: int, m: int, T: int):
 		'''
 		TODOs: 
 		* allocate less memory
@@ -11,7 +11,6 @@ class PFKernel:
 		self.device = device
 		self.d = d
 		self.T = T
-		self.use_sqrt = use_sqrt
 		with torch.no_grad():
 			index = torch.arange(d, device=device).expand(m, -1)
 			product = torch.meshgrid(index.unbind())
@@ -27,11 +26,7 @@ class PFKernel:
 		# P1, P2 must be square and same shape
 		# assert P1.shape == (self.d, self.d) and P2.shape == P1.shape
 		if normalize:
-			if self.use_sqrt:
-				return torch.sqrt(1 - self.__call__(P1, P2).pow(2) / (self.__call__(P1, P1) * self.__call__(P2, P2)))
-			else:
-			# Note: true kernel is sqrt(), however there is a subgradient/NaN issue around sqrt(0). 
-				return 1 - self.__call__(P1, P2).pow(2) / (self.__call__(P1, P1) * self.__call__(P2, P2))
+			return torch.sqrt((1 - self.__call__(P1, P2).pow(2) / (self.__call__(P1, P1) * self.__call__(P2, P2))).clamp(1e-8)) # clamp to prevent subgradient/NaN issue around sqrt(0)
 		else:
 			sum_powers = torch.eye(self.d, device=self.device)
 			power = torch.eye(self.d, device=self.device)

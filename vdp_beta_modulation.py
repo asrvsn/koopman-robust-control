@@ -25,7 +25,7 @@ PsiX, PsiY = obs(X), obs(Y)
 
 # Initialize kernel
 d, m, T = PsiX.shape[0], 2, 20
-K = PFKernel(device, d, m, T, use_sqrt=False)
+K = PFKernel(device, d, m, T)
 
 # Nominal operator
 P0 = dmd(PsiX, PsiY)

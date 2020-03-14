@@ -19,13 +19,13 @@ obs = PolynomialObservable(p, d, k)
 
 # Init data
 mu = 3.0
-X, Y = vdp.dataset(mu, n=16000, b=40, skip=3500) # start on limit cycle
+X, Y = vdp.dataset(mu, n=6000, b=40, skip=1312) # start on limit cycle
 X, Y = X.to(device), Y.to(device)
 PsiX, PsiY = obs(X), obs(Y)
 
 # Initialize kernel
-d, m, T = PsiX.shape[0], 2, 16
-K = PFKernel(device, d, m, T, use_sqrt=False)
+d, m, T = PsiX.shape[0], 2, 60
+K = PFKernel(device, d, m, T)
 
 # Nominal operator
 P0 = dmd(PsiX, PsiY)
@@ -37,7 +37,7 @@ assert not torch.isnan(P0).any().item()
 baseline = False
 beta = 200
 dist_func = euclidean_matrix_kernel if baseline else (lambda x, y: K(x, y, normalize=True)) 
-hmc_step=1e-6
+hmc_step=1e-4
 
 samples = perturb(
 	50, P0, dist_func, beta,  
@@ -53,7 +53,7 @@ torch.save(torch.stack(samples), f'tensors/{name}_vdp.pt')
 
 # Visualize perturbations
 
-t = 8000
+t = 3000
 
 X = X.cpu()
 

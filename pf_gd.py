@@ -29,7 +29,7 @@ assert spectral_radius(P1) <= 1.0
 P0, P1 = P0.detach().requires_grad_(), P1.detach().requires_grad_()
 
 m, T = 2, 20 # T too large will destabilize the gradient descent
-K = PFKernel(device, d, m, T, use_sqrt=False)
+K = PFKernel(device, d, m, T)
 
 eps = 1e-3
 step = 1e-3
