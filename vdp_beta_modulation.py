@@ -24,7 +24,7 @@ X, Y = X.to(device), Y.to(device)
 PsiX, PsiY = obs(X), obs(Y)
 
 # Initialize kernel
-d, m, T = PsiX.shape[0], 2, 6
+d, m, T = PsiX.shape[0], 2, 20
 K = PFKernel(device, d, m, T, use_sqrt=False)
 
 # Nominal operator
@@ -39,13 +39,13 @@ dist_func = euclidean_matrix_kernel if baseline else (lambda x, y: K(x, y, norma
 
 rms_dist = []
 
-for beta in np.linspace(1, 100, 30):
+for beta in np.linspace(1, 100, 50):
 
 	samples = perturb(
 		30, P0, dist_func, beta,  
-		sp_div=(1e-1, 1e-1),
+		sp_div=(1.0, 1.0), # leave spectral gap wide to purely determine effect of `beta`
 		hmc_step=5e-4,
-		hmc_leapfrog=10,
+		hmc_leapfrog=25,
 	)
 
 	rms = np.array([dist_func(P0, P).item() for P in samples])

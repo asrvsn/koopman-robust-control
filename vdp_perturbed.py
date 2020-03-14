@@ -24,7 +24,7 @@ X, Y = X.to(device), Y.to(device)
 PsiX, PsiY = obs(X), obs(Y)
 
 # Initialize kernel
-d, m, T = PsiX.shape[0], 2, 6
+d, m, T = PsiX.shape[0], 2, 16
 K = PFKernel(device, d, m, T, use_sqrt=False)
 
 # Nominal operator
@@ -37,12 +37,13 @@ assert not torch.isnan(P0).any().item()
 baseline = False
 beta = 200
 dist_func = euclidean_matrix_kernel if baseline else (lambda x, y: K(x, y, normalize=True)) 
+hmc_step=1e-6
 
 samples = perturb(
-	25, P0, dist_func, beta,  
-	sp_div=(0, 1e-3),
-	hmc_step=1e-5,
-	hmc_leapfrog=30,
+	50, P0, dist_func, beta,  
+	sp_div=(1e-3, 1e-3),
+	hmc_step=hmc_step,
+	hmc_leapfrog=25,
 )
 
 # Save samples
@@ -63,7 +64,7 @@ for Pn in samples:
 
 plt.xlim(left=-6.0, right=6.0)
 plt.ylim(bottom=-6.0, top=6.0)
-# plt.title(f'Perturbations of Van der Pol ({"baseline" if baseline else "kernel"})')
+plt.title(f'beta={beta}, step={hmc_step}, T={T}, distance={"Frobenius" if baseline else "Kernel"}')
 Z0 = obs.extrapolate(P0.cpu(), X, t)
 plt.plot(Z0[0], Z0[1], label='Nominal')
 
@@ -79,8 +80,8 @@ for Pn in samples:
 
 plt.xlim(left=X[0][t], right=X[0][0] + 0.05)
 plt.ylim(bottom=X[1][t], top=X[1][0] + 0.05)
-# plt.title(f'Perturbations of Van der Pol ({"baseline" if baseline else "kernel"})')
-Z0 = obs.extrapolate(P0.cpu(), X, t+50)
+plt.title(f'beta={beta}, step={hmc_step}, T={T}, distance={"Frobenius" if baseline else "Kernel"}')
+Z0 = obs.extrapolate(P0.cpu(), X, t+100)
 plt.plot(Z0[0], Z0[1], label='Nominal')
 
 plt.plot([X[0][0]], [X[1][0]], marker='o', color='blue')
