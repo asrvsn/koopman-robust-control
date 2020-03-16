@@ -20,7 +20,7 @@ obs = PolynomialObservable(p, d, k)
 # Init data 
 t_max = 400
 n_per = 16000
-n_init = 5
+n_init = 12
 x0s = np.linspace(-2.0, 2.0, n_init)
 xdot0s = np.linspace(-2.0, 2.0, n_init)
 X, Y = [], []
@@ -50,9 +50,12 @@ baseline = False
 beta = 50
 dist_func = euclidean_matrix_kernel if baseline else (lambda x, y: K(x, y, normalize=True)) 
 hmc_step = 1e-5
+x_samples = 6
+y_samples = 3
+n_samples = x_samples*y_samples
 
 samples = perturb(
-	25, P0, dist_func, beta,  
+	n_samples, P0, dist_func, beta,  
 	sp_div=(1e-2, 1e-2),
 	hmc_step=hmc_step,
 	hmc_leapfrog=25,
@@ -78,7 +81,7 @@ plt.figure()
 xbound, ybound = 2.2, 2.2
 plt.xlim(left=-xbound, right=xbound)
 plt.ylim(bottom=-ybound, top=ybound)
-plt.title('Nominal extrapolation of Duffing Oscillator')
+plt.title('Nominal extrapolation of the Duffing Oscillator')
 for x0 in x0s:
 	for xdot0 in xdot0s:
 		x = torch.Tensor([[x0], [xdot0]]).to(device)
@@ -89,21 +92,27 @@ for x0 in x0s:
 
 deduped_legend()
 
+fig, axs = plt.subplots(y_samples, x_samples)
+fig.suptitle(f'Perturbed extrapolations of the Duffing oscillator')
+r, c = 0, 0
 for Pn in samples:
-	plt.figure()
+	ax = axs[r, c]
 	xbound, ybound = 2.2, 2.2
-	plt.xlim(left=-xbound, right=xbound)
-	plt.ylim(bottom=-ybound, top=ybound)
-	plt.title(f'Perturbed extrapolations of Duffing oscillator ({"Frobenius distance" if baseline else "P-F distance"})')
+	ax.set_xlim(left=-xbound, right=xbound)
+	ax.set_ylim(bottom=-ybound, top=ybound)
 	for x0 in x0s:
 		for xdot0 in xdot0s:
 			x = torch.Tensor([[x0], [xdot0]]).to(device)
 			Zn = obs.extrapolate(Pn, x, t).cpu()
 			label, color = get_label(Zn[:, -1])
 			if label != 'Unstable':
-				plt.plot(Zn[0], Zn[1], label=label, color=color)
+				ax.plot(Zn[0], Zn[1], label=label, color=color)
+	c += 1
+	if c == x_samples:
+		c = 0
+		r += 1
 
-	deduped_legend()
+deduped_legend()
 
 plt.show()
 

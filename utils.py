@@ -15,6 +15,7 @@ def zip_with(X: tuple, Y: tuple, f: Callable):
 
 def spectral_radius(A: torch.Tensor, eps=None, n_iter=None):
 	if eps is None and n_iter is None:
+		# return _sp_radius_conv(A, 1e-4)
 		return _sp_radius_niter(A, 1000)
 	elif eps is not None:
 		return _sp_radius_conv(A, eps)
@@ -65,9 +66,7 @@ if __name__ == '__main__':
 		L = torch.linspace(e, 0.01, d, device=device)
 		P = torch.mm(torch.mm(A, torch.diag(L)), torch.pinverse(A))
 
-		prec = 1e-4
-		n_iter = 1000
 		np_e_max = np.abs(np.linalg.eigvals(P.cpu().numpy())).max()
-		pwr_e_max = spectral_radius(P, n_iter=n_iter).item()
+		pwr_e_max = spectral_radius(P).item()
 		print('True:', e, 'numpy:', np_e_max, 'pwr_iter:', pwr_e_max)
 		# assert np.abs(np_e_max - pwr_e_max) <= prec
