@@ -41,7 +41,7 @@ hmc_step=1e-4
 
 samples = perturb(
 	50, P0, dist_func, beta,  
-	sp_div=(1e-3, 1e-3),
+	sp_div=(1e-1, 1e-1),
 	hmc_step=hmc_step,
 	hmc_leapfrog=25,
 )
