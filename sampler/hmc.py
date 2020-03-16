@@ -19,7 +19,7 @@ def leapfrog(params: tuple, momentum: tuple, potential: Callable, boundary: Call
 		u = potential(p)
 		d_p = torch.autograd.grad(u, p)
 		if zero_nan: 
-			d_p = tuple(torch.zeros_like(dw) if torch.isnan(dw).any() else dw for dw in d_p)
+			d_p = tuple(zero_if_nan(dw) for dw in d_p)
 		return d_p
 
 	momentum = zip_with(momentum, params_grad(params), lambda m, dp: m - 0.5*step_size*dp)

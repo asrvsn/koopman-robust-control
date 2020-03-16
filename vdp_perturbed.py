@@ -19,7 +19,10 @@ obs = PolynomialObservable(p, d, k)
 
 # Init data
 mu = 3.0
-X, Y = vdp.dataset(mu, n=6000, b=40, skip=1312) # start on limit cycle
+n_vdp = 6000
+b_vdp = 160
+skip_vdp = int(n_vdp * 8 / b_vdp) # start on limit cycle
+X, Y = vdp.dataset(mu, n=n_vdp, b=b_vdp, skip=skip_vdp) 
 X, Y = X.to(device), Y.to(device)
 PsiX, PsiY = obs(X), obs(Y)
 
@@ -35,15 +38,15 @@ assert not torch.isnan(P0).any().item()
 # Sample dynamics
 
 baseline = False
-beta = 50
+beta = 150
 dist_func = euclidean_matrix_kernel if baseline else (lambda x, y: K(x, y, normalize=True)) 
-hmc_step=1e-5
+hmc_step=1e-6
 
 samples = perturb(
-	25, P0, dist_func, beta,  
+	30, P0, dist_func, beta,  
 	sp_div=(1e-2, 1e-2),
 	hmc_step=hmc_step,
-	hmc_leapfrog=25,
+	hmc_leapfrog=250,
 )
 
 # Save samples
@@ -53,14 +56,20 @@ torch.save(torch.stack(samples), f'tensors/{name}_vdp.pt')
 
 # Visualize perturbations
 
-t = 3000
+t = int(n_vdp/2)
 
 X = X.cpu()
 
 plt.figure()
+
 for Pn in samples:
 	Zn = obs.extrapolate(Pn.cpu(), X, t)
-	plt.plot(Zn[0], Zn[1], color='grey', alpha=0.3)
+	plt.plot(Zn[0], Zn[1], color='grey', alpha=0.3, label='Numeric perturbation')
+
+# for mu in [2.5, 3.5, 4.0]:
+#   X, _ = vdp.dataset(mu, n=n_vdp, b=b_vdp, skip=skip_vdp) # start on limit cycle
+#   X = X[:t]
+#   plt.plot(X[0], X[1], color='green', alpha=0.5, label='Analytic perturbation')
 
 plt.xlim(left=-6.0, right=6.0)
 plt.ylim(bottom=-6.0, top=6.0)
@@ -69,23 +78,25 @@ Z0 = obs.extrapolate(P0.cpu(), X, t)
 plt.plot(Z0[0], Z0[1], label='Nominal')
 
 plt.plot([X[0][0]], [X[1][0]], marker='o', color='blue')
-plt.legend()
+deduped_legend()
 
-t = 300
+# Closeup
 
-plt.figure()
-for Pn in samples:
-	Zn = obs.extrapolate(Pn.cpu(), X, t+50)
-	plt.plot(Zn[0], Zn[1], color='grey', alpha=0.3)
+# t = 300
 
-plt.xlim(left=X[0][t], right=X[0][0] + 0.05)
-plt.ylim(bottom=X[1][t], top=X[1][0] + 0.05)
-plt.title(f'beta={beta}, step={hmc_step}, T={T}, distance={"Frobenius" if baseline else "Kernel"}')
-Z0 = obs.extrapolate(P0.cpu(), X, t+100)
-plt.plot(Z0[0], Z0[1], label='Nominal')
+# plt.figure()
+# for Pn in samples:
+# 	Zn = obs.extrapolate(Pn.cpu(), X, t+50)
+# 	plt.plot(Zn[0], Zn[1], color='grey', alpha=0.3)
 
-plt.plot([X[0][0]], [X[1][0]], marker='o', color='blue')
-plt.legend()
+# plt.xlim(left=X[0][t], right=X[0][0] + 0.05)
+# plt.ylim(bottom=X[1][t], top=X[1][0] + 0.05)
+# plt.title(f'beta={beta}, step={hmc_step}, T={T}, distance={"Frobenius" if baseline else "Kernel"}')
+# Z0 = obs.extrapolate(P0.cpu(), X, t+100)
+# plt.plot(Z0[0], Z0[1], label='Nominal')
+
+# plt.plot([X[0][0]], [X[1][0]], marker='o', color='blue')
+# plt.legend()
 
 plt.show()
 

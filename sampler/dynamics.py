@@ -25,7 +25,7 @@ def perturb(n_samples: int, P0: torch.Tensor, dist_func: Callable, beta: float, 
 
 	def potential(params: tuple):
 		(P,) = params
-		d_k = dist_func(P0, P).clamp(1e-8, 1-1e-8)
+		d_k = dist_func(P0, P).clamp(1e-8, 1)
 		print(d_k.item())
 		u = -pdf.log_prob(d_k)
 		return u

@@ -46,7 +46,7 @@ assert not torch.isnan(P0).any().item()
 
 # Sample dynamics
 
-baseline = False
+baseline = True
 beta = 50
 dist_func = euclidean_matrix_kernel if baseline else (lambda x, y: K(x, y, normalize=True)) 
 hmc_step = 1e-5
