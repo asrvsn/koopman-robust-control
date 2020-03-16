@@ -1,5 +1,6 @@
 import torch
 import matplotlib.pyplot as plt
+import scipy.stats as stats
 
 from features import *
 from kernel import *
@@ -20,7 +21,7 @@ obs = PolynomialObservable(p, d, k)
 # Init data
 mu = 3.0
 n_vdp = 6000
-b_vdp = 160
+b_vdp = 40
 skip_vdp = int(n_vdp * 8 / b_vdp) # start on limit cycle
 X, Y = vdp.dataset(mu, n=n_vdp, b=b_vdp, skip=skip_vdp) 
 X, Y = X.to(device), Y.to(device)
@@ -38,15 +39,20 @@ assert not torch.isnan(P0).any().item()
 # Sample dynamics
 
 baseline = False
-beta = 150
+beta = 50
 dist_func = euclidean_matrix_kernel if baseline else (lambda x, y: K(x, y, normalize=True)) 
-hmc_step=1e-6
+hmc_step=1e-5
+n_samples = 100
 
 samples = perturb(
-	30, P0, dist_func, beta,  
-	sp_div=(1e-2, 1e-2),
+	n_samples, P0, dist_func, beta,  
+	sp_div=(1e-1, 1e-1),
 	hmc_step=hmc_step,
-	hmc_leapfrog=250,
+  hmc_random_step=False,
+	hmc_leapfrog=25,
+  hmc_burn=30,
+  hmc_target_accept=0.75,
+  NUTS=False,
 )
 
 # Save samples
@@ -79,6 +85,18 @@ plt.plot(Z0[0], Z0[1], label='Nominal')
 
 plt.plot([X[0][0]], [X[1][0]], marker='o', color='blue')
 deduped_legend()
+
+# Sample distribution
+
+plt.figure()
+distances = [dist_func(P0, P) for P in samples]
+plt.hist(distances, bins=int(n_samples/4), density=True)
+plt.title('Sample distribution')
+plt.figure()
+d = np.linspace(0, 1, 100)
+p = stats.beta.pdf(d, 1.0, beta, loc=0, scale=1)
+plt.plot(d, p)
+plt.title(f'Posterior distribution, beta={beta}')
 
 # Closeup
 

@@ -44,7 +44,10 @@ def accept(h_old: torch.Tensor, h_new: torch.Tensor):
 	rho = min(0., h_old - h_new)
 	return rho >= torch.log(torch.rand(1).to(h_old.device))
 
-def sample(n_samples: int, init_params: tuple, potential: Callable, boundary: Callable, step_size=0.03, n_leapfrog=10, n_burn=10):
+def sample(
+		n_samples: int, init_params: tuple, potential: Callable, boundary: Callable, 
+		step_size=0.03, n_leapfrog=10, n_burn=10, random_step=False
+	):
 	'''
 	Leapfrog HMC 
 
@@ -57,7 +60,12 @@ def sample(n_samples: int, init_params: tuple, potential: Callable, boundary: Ca
 	while len(ret_params) < n_samples:
 		momentum = gibbs(params)
 		h_old = hamiltonian(params, momentum, potential)
-		params, momentum = leapfrog(params, momentum, potential, boundary, n_leapfrog, step_size)
+
+		if random_step:
+			eps = torch.normal(step_size, 1e-5, (1,))
+		else:
+			eps = step_size
+		params, momentum = leapfrog(params, momentum, potential, boundary, n_leapfrog, eps)
 
 		params = tuple(w.detach().requires_grad_() for w in params)
 		h_new = hamiltonian(params, momentum, potential)
