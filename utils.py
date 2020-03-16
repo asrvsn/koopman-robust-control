@@ -13,20 +13,34 @@ def set_seed(seed: int):
 def zip_with(X: tuple, Y: tuple, f: Callable):
 	return tuple(f(x,y) for (x,y) in zip(X, Y))
 
-def spectral_radius(A: torch.Tensor, eps=1e-6, n_iter=1000):
-	v = torch.randn((A.shape[0], 1), device=A.device)
+def spectral_radius(A: torch.Tensor, eps=None, n_iter=None):
+	if eps is None and n_iter is None:
+		return _sp_radius_niter(A, 1000)
+	elif eps is not None:
+		return _sp_radius_conv(A, eps)
+	elif n_iter is not None:
+		return _sp_radius_niter(A, n_iter)
+
+def _sp_radius_conv(A: torch.Tensor, eps: float):
+	v = torch.ones((A.shape[0], 1), device=A.device)
 	v_new = v.clone()
 	ev = v.t()@A@v
 	ev_new = ev.clone()
-	n = 0
-	while (A@v_new - ev_new*v_new).norm() > eps and n < n_iter:
+	while (A@v_new - ev_new*v_new).norm() > eps:
 		v = v_new
 		ev = ev_new
 		v_new = A@v
 		v_new = v_new / v_new.norm()
 		ev_new = v_new.t()@A@v_new
-		n += 1
 	return ev_new
+
+def _sp_radius_niter(A: torch.Tensor, n_iter: int):
+	v = torch.ones((A.shape[0], 1), device=A.device)
+	for _ in range(n_iter):
+		v = A@v
+		v = v / v.norm()
+	ev = v.t()@A@v
+	return ev
 
 def deduped_legend():
 	handles, labels = plt.gca().get_legend_handles_labels()
@@ -54,6 +68,6 @@ if __name__ == '__main__':
 		prec = 1e-4
 		n_iter = 1000
 		np_e_max = np.abs(np.linalg.eigvals(P.cpu().numpy())).max()
-		pwr_e_max = spectral_radius(P, eps=prec, n_iter=n_iter).item()
+		pwr_e_max = spectral_radius(P, n_iter=n_iter).item()
 		print('True:', e, 'numpy:', np_e_max, 'pwr_iter:', pwr_e_max)
 		# assert np.abs(np_e_max - pwr_e_max) <= prec

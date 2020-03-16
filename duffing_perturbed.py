@@ -5,7 +5,7 @@ from features import *
 from kernel import *
 from operators import *
 from utils import *
-import hmc as hmc
+from sampler.dynamics import perturb
 import systems.duffing as duffing
 
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
@@ -20,7 +20,7 @@ obs = PolynomialObservable(p, d, k)
 # Init data 
 t_max = 400
 n_per = 16000
-n_init = 11
+n_init = 5
 x0s = np.linspace(-2.0, 2.0, n_init)
 xdot0s = np.linspace(-2.0, 2.0, n_init)
 X, Y = [], []
@@ -44,62 +44,23 @@ P0 = dmd(PsiX, PsiY)
 P0 = P0.to(device)
 assert not torch.isnan(P0).any().item()
 
-# HMC
+# Sample dynamics
 
 baseline = False
-eig_max = spectral_radius(P0) 
-s_max, s_min = eig_max + 1e-3, eig_max - 1e-3
+beta = 50
 dist_func = euclidean_matrix_kernel if baseline else (lambda x, y: K(x, y, normalize=True)) 
+hmc_step = 1e-5
 
-alpha, beta = 1, 80
-pdf = torch.distributions.beta.Beta(torch.Tensor([alpha]).to(device), torch.Tensor([beta]).to(device))
-
-def potential(params: tuple):
-	(P,) = params
-	d_k = dist_func(P0, P).clamp(1e-6, 1-1e-6)
-	print(d_k.item())
-	u = pdf.log_prob(d_k)
-	return u
-
-def boundary(params: tuple, momentum: tuple, step: float, resolution=10):
-	(P,) = params
-	(M,) = momentum
-	s = spectral_radius(P + step*M)
-	if s > s_max:
-		micro_step = step/resolution
-		P_cand = P.detach()
-		while spectral_radius(P_cand) <= s_max:
-			P_cand += micro_step*M
-		P_cand = P_cand.requires_grad_(True)
-		# Reflect along plane orthogonal to spectral gradient
-		dS = -torch.autograd.grad(spectral_radius(P_cand), P_cand)[0]
-		M_para = torch.trace(torch.mm(M.t(), dS)) * dS / torch.trace(torch.mm(dS.t(), dS))
-		M_refl = M - 2*M_para
-		return ((P_cand,), (M_refl,))
-	elif s < s_min:
-		micro_step = step/resolution
-		P_cand = P.detach()
-		while spectral_radius(P_cand) >= s_min:
-			P_cand += micro_step*M
-		P_cand = P_cand.requires_grad_(True)
-		# Reflect along plane orthogonal to spectral gradient
-		dS = torch.autograd.grad(spectral_radius(P_cand), P_cand)[0]
-		M_para = torch.trace(torch.mm(M.t(), dS)) * dS / torch.trace(torch.mm(dS.t(), dS))
-		M_refl = M - 2*M_para
-		return ((P_cand,), (M_refl,))
-	return None
-
-n_samples = 6
-samples, ratio = hmc.sample(n_samples, (P0,), potential, boundary, n_burn=20, n_leapfrog=25, step_size=.00001)
-samples = [P for (P,) in samples]
-
-print('Acceptance ratio: ', ratio)
-print('Nominal spectral radius:', eig_max.item())
-print('Perturbed spectral radii:', [spectral_radius(P).item() for P in samples])
+samples = perturb(
+	25, P0, dist_func, beta,  
+	sp_div=(1e-2, 1e-2),
+	hmc_step=hmc_step,
+	hmc_leapfrog=25,
+)
 
 # Save samples
-# name = 'perturbed_baseline' if baseline else 'perturbed_pf' 
-# torch.save(torch.stack(samples), f'tensors/{name}_duffing.pt')
+name = 'perturbed_baseline' if baseline else 'perturbed_pf' 
+torch.save(torch.stack(samples), f'tensors/{name}_duffing.pt')
 
 # Visualize perturbations
 
