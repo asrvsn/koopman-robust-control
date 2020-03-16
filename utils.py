@@ -14,7 +14,7 @@ def zip_with(X: tuple, Y: tuple, f: Callable):
 	return tuple(f(x,y) for (x,y) in zip(X, Y))
 
 def spectral_radius(A: torch.Tensor, eps=1e-6):
-	v = torch.randn((A.shape[0], 1), device=device)
+	v = torch.randn((A.shape[0], 1), device=A.device)
 	v_new = v.clone()
 	ev = v.t()@A@v
 	ev_new = ev.clone()
@@ -32,7 +32,7 @@ def deduped_legend():
 	plt.legend(by_label.values(), by_label.keys())
 
 def euclidean_matrix_kernel(A: torch.Tensor, B: torch.Tensor):
-	return 1 - torch.trace(torch.mm(A.t(), B)).pow(2) / (torch.trace(torch.mm(A.t(), A)) * torch.trace(torch.mm(B.t(), B)))
+	return torch.sqrt((1 - torch.trace(torch.mm(A.t(), B)).pow(2) / (torch.trace(torch.mm(A.t(), A)) * torch.trace(torch.mm(B.t(), B)))).clamp(1e-8))
 
 '''
 Tests
