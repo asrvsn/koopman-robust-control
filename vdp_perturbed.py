@@ -39,16 +39,16 @@ assert not torch.isnan(P0).any().item()
 # Sample dynamics
 
 baseline = False
-beta = 50
+beta = 10
 dist_func = euclidean_matrix_kernel if baseline else (lambda x, y: K(x, y, normalize=True)) 
-hmc_step=1e-5
-n_samples = 100
+hmc_step=1e-4
+n_samples = 200
 
 samples = perturb(
 	n_samples, P0, dist_func, beta,  
 	sp_div=(1e-1, 1e-1),
 	hmc_step=hmc_step,
-  hmc_random_step=False,
+  hmc_random_step=True,
 	hmc_leapfrog=25,
   hmc_burn=30,
   hmc_target_accept=0.75,
@@ -90,9 +90,7 @@ deduped_legend()
 
 plt.figure()
 distances = [dist_func(P0, P) for P in samples]
-plt.hist(distances, bins=int(n_samples/4), density=True)
-plt.title('Sample distribution')
-plt.figure()
+plt.hist(distances, bins=int(n_samples/10), density=True)
 d = np.linspace(0, 1, 100)
 p = stats.beta.pdf(d, 1.0, beta, loc=0, scale=1)
 plt.plot(d, p)

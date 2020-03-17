@@ -62,7 +62,7 @@ def sample(
 		h_old = hamiltonian(params, momentum, potential)
 
 		if random_step:
-			eps = torch.normal(step_size, 1e-5, (1,))
+			eps = torch.normal(step_size, 2*step_size, (1,)).clamp(step_size/10)
 		else:
 			eps = step_size
 		params, momentum = leapfrog(params, momentum, potential, boundary, n_leapfrog, eps)
