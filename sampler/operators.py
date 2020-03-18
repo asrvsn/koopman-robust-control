@@ -5,8 +5,8 @@ import torch
 import numpy as np
 import matplotlib.pyplot as plt
 
-from features import *
-from utils import *
+from sampler.features import *
+from sampler.utils import *
 
 def dmd(X: torch.Tensor, Y: torch.Tensor, operator='K', spectral_constraint=None):
 	X, Y = X.detach(), Y.detach() 

@@ -32,20 +32,25 @@ m, T = 2, 20
 K = PFKernel(device, d, m, T)
 
 eps = 1e-3
-step = 1e-2
+step = 1e-3
 d = K(P0, P1, normalize=True)
 print(d.item())
 
-i, n = 0, 1000
+i, n = 0, float('inf')
 loss = []
 
-while d > eps and i < n:
-	(dP,) = torch.autograd.grad(d, P1)
-	P1 = P1 - step*dP
-	d = K(P0, P1, normalize=True)
-	print(d.item())
-	loss.append(d.item())
-	i += 1
+try:
+
+	while d > eps and i < n:
+		(dP,) = torch.autograd.grad(d, P1)
+		P1 = P1 - step*dP
+		d = K(P0, P1, normalize=True)
+		print(d.item())
+		loss.append(d.item())
+		i += 1
+
+except KeyboardInterrupt:
+	pass
 
 plt.plot(loss)
 plt.show()

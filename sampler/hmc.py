@@ -2,7 +2,8 @@ import torch
 import numpy as np
 import matplotlib.pyplot as plt
 from typing import Callable
-from utils import *
+
+from sampler.utils import *
 
 def hamiltonian(params: tuple, momentum: tuple, potential: Callable):
 	U = potential(params)
@@ -82,5 +83,23 @@ def sample(
 
 
 if __name__ == '__main__':
-	# TODO tests
-	pass
+	import hamiltorch
+	set_seed(9001)
+	device = 'cuda' if torch.cuda.is_available() else 'cpu'
+
+	def log_prob(omega):
+		mean = torch.Tensor([0.,0.,0.])
+		std = torch.Tensor([.5,1.,2.])
+		dist = torch.distributions.MultivariateNormal(mean, torch.diag(std**2))
+		return dist.log_prob(omega).sum()
+
+	N = 400
+	step = .3
+	L = 5
+
+	params_init = torch.zeros(3)
+	samples = hamiltorch.sample(log_prob_func=log_prob, params_init=params_init, num_samples=N, step_size=step, num_steps_per_sample=L)
+	samples = np.array(samples)
+	plt.plot(samples[:,0], samples[:,1])
+
+	plt.show()

@@ -6,7 +6,7 @@ import torch
 
 import sampler.hmc as hmc
 import sampler.hmc_nuts as hmc_nuts
-from utils import *
+from sampler.utils import *
 
 def perturb(
 			n_samples: int, P0: torch.Tensor, dist_func: Callable, beta: float, \
