@@ -1,10 +1,10 @@
 import torch
 import matplotlib.pyplot as plt
 
-from features import *
-from kernel import *
-from operators import *
-from utils import *
+from sampler.features import *
+from sampler.kernel import *
+from sampler.operators import *
+from sampler.utils import *
 from sampler.dynamics import perturb
 import systems.duffing as duffing
 

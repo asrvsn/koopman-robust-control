@@ -26,9 +26,6 @@ def kdmd(X: torch.Tensor, Y: torch.Tensor, k: Kernel, epsilon=0, operator='K'):
 	P = torch.mm(torch.pinverse(G_XX + epsilon*torch.eye(n, device=device)), G_XY)
 	return P
 
-def is_semistable(P: torch.Tensor, eps=1e-2):
-	return spectral_radius(P).item() <= 1.0 + eps
-
 if __name__ == '__main__':
 	import systems.vdp as vdp
 	import systems.duffing as duffing

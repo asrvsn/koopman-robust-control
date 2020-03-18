@@ -54,6 +54,9 @@ def euclidean_matrix_kernel(A: torch.Tensor, B: torch.Tensor):
 def zero_if_nan(x: torch.Tensor):
 	return torch.zeros_like(x, device=x.device) if torch.isnan(x).any() else x
 
+def is_semistable(P: torch.Tensor, eps=1e-2):
+	return spectral_radius(P).item() <= 1.0 + eps
+
 '''
 Tests
 '''

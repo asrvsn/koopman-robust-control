@@ -1,5 +1,5 @@
 import torch
-from operators import is_semistable
+from sampler.utils import is_semistable
 
 class PFKernel:
 	def __init__(self, device: torch.device, d: int, m: int, T: int):

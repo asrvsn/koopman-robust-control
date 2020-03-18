@@ -5,8 +5,8 @@ Perron-Frobenius distance gradient descent test
 import matplotlib.pyplot as plt
 import torch
 
-from kernel import *
-from utils import *
+from sampler.kernel import *
+from sampler.utils import *
 
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 set_seed(9001)

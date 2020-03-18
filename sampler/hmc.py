@@ -47,7 +47,7 @@ def accept(h_old: torch.Tensor, h_new: torch.Tensor):
 
 def sample(
 		n_samples: int, init_params: tuple, potential: Callable, boundary: Callable, 
-		step_size=0.03, n_leapfrog=10, n_burn=10, random_step=False
+		step_size=0.03, n_leapfrog=10, n_burn=10, random_step=False, debug=False
 	):
 	'''
 	Leapfrog HMC 
@@ -73,7 +73,8 @@ def sample(
 
 		if accept(h_old, h_new) and n > n_burn:
 			ret_params.append(params)
-			print('Accepted')
+			if debug:
+				print('Accepted')
 
 		n += 1
 
@@ -84,22 +85,102 @@ def sample(
 
 if __name__ == '__main__':
 	import hamiltorch
+	import scipy.stats as stats
+
+	torch.autograd.set_detect_anomaly(True)
 	set_seed(9001)
 	device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
+	# Gaussian
+	mean = torch.Tensor([0.,0.,0.])
+	var = torch.Tensor([.5,1.,2.])**2
+	dist = torch.distributions.MultivariateNormal(mean, torch.diag(var))
+
 	def log_prob(omega):
-		mean = torch.Tensor([0.,0.,0.])
-		std = torch.Tensor([.5,1.,2.])
-		dist = torch.distributions.MultivariateNormal(mean, torch.diag(std**2))
 		return dist.log_prob(omega).sum()
 
-	N = 400
+	N = 1000
 	step = .3
 	L = 5
+	burn = 50
 
 	params_init = torch.zeros(3)
 	samples = hamiltorch.sample(log_prob_func=log_prob, params_init=params_init, num_samples=N, step_size=step, num_steps_per_sample=L)
-	samples = np.array(samples)
-	plt.plot(samples[:,0], samples[:,1])
+	samples = np.array([s.numpy() for s in samples])
+	x = np.linspace(-6,6,200)
+	fig, axs = plt.subplots(1, 3)
+	fig.suptitle(f'hamiltorch result, 3d gaussian, var={var.numpy().tolist()}, step={step}')
+	for i in range(3):
+		axs[i].hist(samples[:,i],density=True,bins=20)
+		axs[i].plot(x, stats.norm.pdf(x, loc=mean[i], scale=var[i]))
+
+	def potential(params):
+		return -dist.log_prob(params[0].view(-1)).sum()
+
+	params_init = (torch.zeros((3,1)),)
+	boundary = lambda *unused: None
+	samples, _ = sample(N, params_init, potential, boundary, step_size=step, n_leapfrog=L, n_burn=burn)
+	samples = np.array([s.view(-1).numpy() for (s,) in samples]) 
+	x = np.linspace(-6,6,200)
+	fig, axs = plt.subplots(1, 3)
+	fig.suptitle(f'sampler.hmc result, 3d gaussian, var={var.numpy().tolist()}, step={step}')
+	for i in range(3):
+		axs[i].hist(samples[:,i],density=True,bins=20)
+		axs[i].plot(x, stats.norm.pdf(x, loc=mean[i], scale=var[i]))
+
+	# Beta
+	alpha = torch.Tensor([1,1,1])
+	beta = torch.Tensor([3,5,10])
+	dist = torch.distributions.beta.Beta(alpha, beta)
+
+	def log_prob(omega):
+		return dist.log_prob(omega.clamp(1e-8)).sum()
+
+	N = 1000
+	step = .003 # Lower step and larger L are better for beta (since it is supported on a small interval)
+	L = 20
+	burn = 0
+
+	params_init = torch.zeros(3)
+	samples = hamiltorch.sample(log_prob_func=log_prob, params_init=params_init, num_samples=N, step_size=step, num_steps_per_sample=L)
+	samples = np.array([s.numpy() for s in samples])
+	x = np.linspace(0,1,100)
+	fig, axs = plt.subplots(1, 3)
+	fig.suptitle(f'hamiltorch result, 3d beta, beta={beta.numpy().tolist()}, step={step}')
+	for i in range(3):
+		axs[i].hist(samples[:,i],density=True,bins=20)
+		axs[i].plot(x, stats.beta.pdf(x, alpha[i], beta[i]))
+
+	def potential(params):
+		return -dist.log_prob(params[0].view(-1).clamp(1e-8)).sum()
+
+	def boundary(params, momentum, step):
+		m = momentum[0]
+		p = params[0]
+		p_min, p_max = p.min(), p.max()
+		m_para = torch.zeros_like(m)
+
+		if p_min < 0:
+			grad = torch.autograd.grad(p_min, p)[0]
+			m_para = m_para + ((m.t()@grad) / (grad.t()@grad)) * grad
+
+		if p_max > 1:
+			grad = torch.autograd.grad(p_max, p)[0]
+			m_para = m_para + ((m.t()@grad) / (grad.t()@grad)) * grad
+
+		if m_para.sum() > 0:
+			return ((p.clamp(0,1),), (m - 2*m_para,))
+		return None
+
+
+	params_init = (torch.zeros((3,1)),)
+	samples, _ = sample(N, params_init, potential, boundary, step_size=step, n_leapfrog=L, n_burn=burn)
+	samples = np.array([s.view(-1).numpy() for (s,) in samples]) 
+	x = np.linspace(0,1,100)
+	fig, axs = plt.subplots(1, 3)
+	fig.suptitle(f'sampler.hmc result, 3d beta, beta={beta.numpy().tolist()}, step={step}')
+	for i in range(3):
+		axs[i].hist(samples[:,i],density=True,bins=20)
+		axs[i].plot(x, stats.beta.pdf(x, alpha[i], beta[i]))
 
 	plt.show()

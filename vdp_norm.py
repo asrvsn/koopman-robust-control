@@ -1,11 +1,11 @@
 import torch
 import matplotlib.pyplot as plt
 
-from features import *
-from kernel import *
-from operators import *
-from hmc import pdf
-from utils import set_seed
+from sampler.features import *
+from sampler.kernel import *
+from sampler.operators import *
+from sampler.hmc import pdf
+from sampler.utils import set_seed
 import systems.vdp as vdp
 
 device = 'cuda' if torch.cuda.is_available() else 'cpu'

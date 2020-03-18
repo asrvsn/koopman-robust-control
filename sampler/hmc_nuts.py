@@ -2,8 +2,8 @@ import torch
 import numpy as np
 import matplotlib.pyplot as plt
 from typing import Callable
-from utils import *
 
+from sampler.utils import *
 from sampler.hmc import hamiltonian, gibbs, leapfrog, accept
 
 # def find_initial_step(init_params):
