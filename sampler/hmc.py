@@ -103,10 +103,10 @@ if __name__ == '__main__':
 	# Gaussian distribution
 	mean = torch.Tensor([0.,0.,0.])
 	var = torch.Tensor([.5,1.,2.])**2
-	dist = torch.distributions.MultivariateNormal(mean, torch.diag(var))
+	pdf = torch.distributions.MultivariateNormal(mean, torch.diag(var))
 
 	def log_prob(omega):
-		return dist.log_prob(omega).sum()
+		return pdf.log_prob(omega).sum()
 
 	N = 1000
 	step = .3
@@ -124,7 +124,7 @@ if __name__ == '__main__':
 		axs[i].plot(x, stats.norm.pdf(x, loc=mean[i], scale=var[i]))
 
 	def potential(params):
-		return -dist.log_prob(params[0].view(-1)).sum()
+		return -pdf.log_prob(params[0].view(-1)).sum()
 
 	params_init = (torch.zeros((3,1)),)
 	boundary = lambda *unused: None
@@ -140,10 +140,10 @@ if __name__ == '__main__':
 	# Beta distribution
 	alpha = torch.Tensor([1,1,1])
 	beta = torch.Tensor([3,5,10])
-	dist = torch.distributions.beta.Beta(alpha, beta)
+	pdf = torch.distributions.beta.Beta(alpha, beta)
 
 	def log_prob(omega):
-		return dist.log_prob(omega.clamp(1e-8)).sum()
+		return pdf.log_prob(omega.clamp(1e-8)).sum()
 
 	N = 1000
 	step = .003 # Lower step and larger L are better for beta (since it is supported on a small interval)
@@ -161,7 +161,7 @@ if __name__ == '__main__':
 		axs[i].plot(x, stats.beta.pdf(x, alpha[i], beta[i]))
 
 	def potential(params):
-		return -dist.log_prob(params[0].view(-1).clamp(1e-8)).sum()
+		return -pdf.log_prob(params[0].view(-1).clamp(1e-8)).sum()
 
 	boundary = reflections.rect_boundary(vmin=0., vmax=1.)
 
