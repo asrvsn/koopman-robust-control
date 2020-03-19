@@ -37,7 +37,7 @@ def fn_boundary(fn: Callable, vmin=-float('inf'), vmax=float('inf'), boundary_re
 	assert vmin < vmax
 	def boundary(params: tuple, momentum: tuple, step: float):
 		p, m = params[0], momentum[0] # TODO generalize to n-d
-		v = fn(p)
+		v = fn(p + m&step)
 
 		if v > vmax:
 			micro_step = step/boundary_resolution
