@@ -24,7 +24,7 @@ def rect_boundary(vmin=-float('inf'), vmax=float('inf')):
 			m_para = m_para + ((m.t()@grad) / (grad.t()@grad)) * grad
 
 		if (m_para != 0).any():
-			p_cand = p.clamp(min=vmin, max=vmax)
+			p_cand = p_cand.clamp(min=vmin, max=vmax)
 			m_refl = m - 2*m_para
 			return ((p_cand.detach().requires_grad_(),), (m_refl.detach().requires_grad_(),)) # Avoid building graph across successive reflections
 		return None

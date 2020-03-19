@@ -41,7 +41,9 @@ def leapfrog(
 			(params, momentum) = bc
 			bc = boundary(params, momentum, step_size)
 
-		params = zip_with(params, momentum, lambda p, m: p + step_size*m)
+		if bc is None: # Safe to take a step
+			params = zip_with(params, momentum, lambda p, m: p + step_size*m)
+
 		momentum = zip_with(momentum, params_grad(params), lambda m, dp: m - step_size*dp)
 
 	momentum = zip_with(momentum, params_grad(params), lambda m, dp: m - 0.5*step_size*dp)
@@ -100,7 +102,9 @@ if __name__ == '__main__':
 	set_seed(9001)
 	device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
-	# Gaussian distribution
+	'''
+	Gaussian distribution
+	'''
 	mean = torch.Tensor([0.,0.,0.])
 	var = torch.Tensor([.5,1.,2.])**2
 	pdf = torch.distributions.MultivariateNormal(mean, torch.diag(var))
@@ -137,7 +141,9 @@ if __name__ == '__main__':
 		axs[i].hist(samples[:,i],density=True,bins=20)
 		axs[i].plot(x, stats.norm.pdf(x, loc=mean[i], scale=var[i]))
 
-	# Beta distribution
+	'''
+	Beta distribution
+	'''
 	alpha = torch.Tensor([1,1,1])
 	beta = torch.Tensor([3,5,10])
 	pdf = torch.distributions.beta.Beta(alpha, beta)
@@ -175,7 +181,10 @@ if __name__ == '__main__':
 		axs[i].hist(samples[:,i],density=True,bins=20)
 		axs[i].plot(x, stats.beta.pdf(x, alpha[i], beta[i]))
 
-	# Reflection test
+	'''
+	Reflection test
+	HMC with hard constraints
+	'''
 	N = 200
 	step = 0.3
 	L = 10
@@ -198,10 +207,13 @@ if __name__ == '__main__':
 	plt.plot(x,-ones,color='black')
 	plt.plot(-ones,x,color='black')
 
-	# Infinite reflection test
-	N = 5
+	'''
+	Overstepped reflection test 
+	Illustrates phenomenon where reflective HMC will mostly return results at the boundaries if step size is too high.
+	'''
+	N = 40
 	step = 3.0
-	L = 3
+	L = 3 # Make arbitrarily large
 	burn = 0
 
 	params_init = (torch.zeros((2,1)),)
@@ -212,7 +224,7 @@ if __name__ == '__main__':
 	samples = np.array([s.view(-1).numpy() for (s,) in samples])
 
 	plt.figure()
-	plt.title(f'Infinite reflection on the square, step={step}')
+	plt.title(f'Overstepped reflection on the square, step={step}')
 	plt.scatter(samples[:,0], samples[:,1])
 	x = np.linspace(-1,1,20)
 	ones = np.ones(x.shape)

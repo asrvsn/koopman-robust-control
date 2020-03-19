@@ -49,7 +49,7 @@ def deduped_legend():
 	plt.legend(by_label.values(), by_label.keys())
 
 def euclidean_matrix_kernel(A: torch.Tensor, B: torch.Tensor):
-	return torch.sqrt((1 - torch.trace(torch.mm(A.t(), B)).pow(2) / (torch.trace(torch.mm(A.t(), A)) * torch.trace(torch.mm(B.t(), B)))).clamp(1e-8))
+	return torch.sqrt((1 - torch.trace(A.t()@B).pow(2) / (torch.trace(A.t()@A) * torch.trace(B.t()@B))).clamp(1e-8))
 
 def zero_if_nan(x: torch.Tensor):
 	return torch.zeros_like(x, device=x.device) if torch.isnan(x).any() else x

@@ -49,6 +49,7 @@ def perturb(
 	# Sample initial conditions uniformly from constraint set 
 	potential = lambda _: 0 
 	sp_step = min(0.3, np.abs(sp_div[0])/10, np.abs(sp_div[1])/10) # Set step as divisor of spectral constraint size
+	print('sp_step', sp_step)
 	sp_leapfrog = 30
 	sp_burn = 0
 	n_conditions = max(1, int(max_samples/n_subproblems))
@@ -100,7 +101,7 @@ if __name__ == '__main__':
 	n_perturb = 10
 	n_samples = 100
 	beta = 5
-	sp_div = (1e-3, 1e-3)
+	sp_div = (1e-2, 1e-2)
 	fig, axs = plt.subplots(2 + n_perturb,len(systems))
 
 	for i, (name, A) in enumerate(systems.items()):
