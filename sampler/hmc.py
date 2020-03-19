@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 from typing import Callable
 
 from sampler.utils import *
-from sampler.reflection import *
+import sampler.reflections as reflections
 
 def hamiltonian(params: tuple, momentum: tuple, potential: Callable):
 	U = potential(params)
@@ -14,7 +14,10 @@ def hamiltonian(params: tuple, momentum: tuple, potential: Callable):
 def gibbs(params: tuple):
 	return tuple(torch.distributions.Normal(torch.zeros_like(w), torch.ones_like(w)).sample() for w in params)
 
-def leapfrog(params: tuple, momentum: tuple, potential: Callable, boundary: Callable, n_leapfrog: int, step_size: float, max_refl: int, zero_nan=False):
+def leapfrog(
+		params: tuple, momentum: tuple, potential: Callable, boundary: Callable, n_leapfrog: int, step_size: float, max_refl: int, 
+		zero_nan=False, debug=False
+	):
 	def params_grad(p):
 		p = tuple(w.detach().requires_grad_() for w in p)
 		u = potential(p)
@@ -34,7 +37,8 @@ def leapfrog(params: tuple, momentum: tuple, potential: Callable, boundary: Call
 		bc = boundary(params, momentum, step_size)
 		while bc is not None and r_i < max_refl: 
 			r_i += 1
-			print('Reflected!', r_i)
+			if debug:
+				print('Reflected!', r_i)
 			(params, momentum) = bc
 			bc = boundary(params, momentum, step_size)
 
@@ -52,7 +56,7 @@ def accept(h_old: torch.Tensor, h_new: torch.Tensor):
 def sample(
 		n_samples: int, init_params: tuple, potential: Callable, boundary: Callable, 
 		step_size=0.03, n_leapfrog=10, n_burn=10, random_step=False, debug=False, return_first=False,
-		max_refl=1000
+		max_refl=100
 	):
 	'''
 	Leapfrog HMC 
@@ -71,7 +75,7 @@ def sample(
 			eps = torch.normal(step_size, 2*step_size, (1,)).clamp(step_size/10)
 		else:
 			eps = step_size
-		params, momentum = leapfrog(params, momentum, potential, boundary, n_leapfrog, eps, max_refl)
+		params, momentum = leapfrog(params, momentum, potential, boundary, n_leapfrog, eps, max_refl, debug=debug)
 
 		params = tuple(w.detach().requires_grad_() for w in params)
 		h_new = hamiltonian(params, momentum, potential)
@@ -159,7 +163,7 @@ if __name__ == '__main__':
 	def potential(params):
 		return -dist.log_prob(params[0].view(-1).clamp(1e-8)).sum()
 
-	boundary = rect_boundary(vmin=0., vmax=1.)
+	boundary = reflections.rect_boundary(vmin=0., vmax=1.)
 
 	params_init = (torch.zeros((3,1)),)
 	samples, _ = sample(N, params_init, potential, boundary, step_size=step, n_leapfrog=L, n_burn=burn)
@@ -179,7 +183,7 @@ if __name__ == '__main__':
 
 	params_init = (torch.zeros((2,1)),)
 	potential = lambda _: 0 # uniform over [-1,1]x[-1,1]
-	boundary = rect_boundary(vmin=-1, vmax=1)
+	boundary = reflections.rect_boundary(vmin=-1, vmax=1)
 
 	samples, _ = sample(N, params_init, potential, boundary, step_size=step, n_leapfrog=L, n_burn=burn, return_first=True)
 	samples = np.array([s.view(-1).numpy() for (s,) in samples])
@@ -202,7 +206,7 @@ if __name__ == '__main__':
 
 	params_init = (torch.zeros((2,1)),)
 	potential = lambda _: 0 # uniform over [-1,1]x[-1,1]
-	boundary = rect_boundary(vmin=-1, vmax=1)
+	boundary = reflections.rect_boundary(vmin=-1, vmax=1)
 
 	samples, _ = sample(N, params_init, potential, boundary, step_size=step, n_leapfrog=L, n_burn=burn, return_first=True)
 	samples = np.array([s.view(-1).numpy() for (s,) in samples])

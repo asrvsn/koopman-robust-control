@@ -6,6 +6,7 @@ import torch
 
 import sampler.hmc as hmc
 import sampler.hmc_nuts as hmc_nuts
+import sampler.reflections as reflections
 from sampler.utils import *
 
 def perturb(
@@ -42,7 +43,7 @@ def perturb(
 		u = -pdf.log_prob(d_k)
 		return u
 
-	boundary = fn_boundary(spectral_radius, vmin=s_max, vmax=s_min)
+	boundary = reflections.fn_boundary(spectral_radius, vmin=s_max, vmax=s_min)
 
 	print('Sampling...')
 
