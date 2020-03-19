@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 from typing import Callable
 
 from sampler.utils import *
+from sampler.reflection import *
 
 def hamiltonian(params: tuple, momentum: tuple, potential: Callable):
 	U = potential(params)
@@ -11,13 +12,14 @@ def hamiltonian(params: tuple, momentum: tuple, potential: Callable):
 	return U + K 
 
 def gibbs(params: tuple):
-	distributions = tuple(torch.distributions.Normal(torch.zeros_like(w), torch.ones_like(w)) for w in params)
-	return tuple(d.sample() for d in distributions)
+	return tuple(torch.distributions.Normal(torch.zeros_like(w), torch.ones_like(w)).sample() for w in params)
 
-def leapfrog(params: tuple, momentum: tuple, potential: Callable, boundary: Callable, n_leapfrog: int, step_size: float, zero_nan=False):
+def leapfrog(params: tuple, momentum: tuple, potential: Callable, boundary: Callable, n_leapfrog: int, step_size: float, max_refl: int, zero_nan=False):
 	def params_grad(p):
 		p = tuple(w.detach().requires_grad_() for w in p)
 		u = potential(p)
+		if type(u) != torch.Tensor: # PyTorch doesn't understand how to differentiate constants
+			return tuple(torch.zeros_like(w, device=w.device) for w in p)
 		d_p = torch.autograd.grad(u, p)
 		if zero_nan: 
 			d_p = tuple(zero_if_nan(dw) for dw in d_p)
@@ -28,9 +30,11 @@ def leapfrog(params: tuple, momentum: tuple, potential: Callable, boundary: Call
 	for n in range(n_leapfrog):
 
 		# Reflect particle until not in violation of boundary 
+		r_i = 0
 		bc = boundary(params, momentum, step_size)
-		while bc is not None: 
-			print('Reflected!')
+		while bc is not None and r_i < max_refl: 
+			r_i += 1
+			print('Reflected!', r_i)
 			(params, momentum) = bc
 			bc = boundary(params, momentum, step_size)
 
@@ -47,7 +51,8 @@ def accept(h_old: torch.Tensor, h_new: torch.Tensor):
 
 def sample(
 		n_samples: int, init_params: tuple, potential: Callable, boundary: Callable, 
-		step_size=0.03, n_leapfrog=10, n_burn=10, random_step=False, debug=False
+		step_size=0.03, n_leapfrog=10, n_burn=10, random_step=False, debug=False, return_first=False,
+		max_refl=1000
 	):
 	'''
 	Leapfrog HMC 
@@ -56,7 +61,7 @@ def sample(
 	boundary: boundary condition which returns either None or (boundary position, reflected momentum)
 	'''
 	params = tuple(x.clone().requires_grad_() for x in init_params)
-	ret_params = []
+	ret_params = [init_params] if return_first else []
 	n = 0
 	while len(ret_params) < n_samples:
 		momentum = gibbs(params)
@@ -66,7 +71,7 @@ def sample(
 			eps = torch.normal(step_size, 2*step_size, (1,)).clamp(step_size/10)
 		else:
 			eps = step_size
-		params, momentum = leapfrog(params, momentum, potential, boundary, n_leapfrog, eps)
+		params, momentum = leapfrog(params, momentum, potential, boundary, n_leapfrog, eps, max_refl)
 
 		params = tuple(w.detach().requires_grad_() for w in params)
 		h_new = hamiltonian(params, momentum, potential)
@@ -91,7 +96,7 @@ if __name__ == '__main__':
 	set_seed(9001)
 	device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
-	# Gaussian
+	# Gaussian distribution
 	mean = torch.Tensor([0.,0.,0.])
 	var = torch.Tensor([.5,1.,2.])**2
 	dist = torch.distributions.MultivariateNormal(mean, torch.diag(var))
@@ -128,7 +133,7 @@ if __name__ == '__main__':
 		axs[i].hist(samples[:,i],density=True,bins=20)
 		axs[i].plot(x, stats.norm.pdf(x, loc=mean[i], scale=var[i]))
 
-	# Beta
+	# Beta distribution
 	alpha = torch.Tensor([1,1,1])
 	beta = torch.Tensor([3,5,10])
 	dist = torch.distributions.beta.Beta(alpha, beta)
@@ -154,24 +159,7 @@ if __name__ == '__main__':
 	def potential(params):
 		return -dist.log_prob(params[0].view(-1).clamp(1e-8)).sum()
 
-	def boundary(params, momentum, step):
-		m = momentum[0]
-		p = params[0]
-		p_min, p_max = p.min(), p.max()
-		m_para = torch.zeros_like(m)
-
-		if p_min < 0:
-			grad = torch.autograd.grad(p_min, p)[0]
-			m_para = m_para + ((m.t()@grad) / (grad.t()@grad)) * grad
-
-		if p_max > 1:
-			grad = torch.autograd.grad(p_max, p)[0]
-			m_para = m_para + ((m.t()@grad) / (grad.t()@grad)) * grad
-
-		if m_para.sum() > 0:
-			return ((p.clamp(0,1),), (m - 2*m_para,))
-		return None
-
+	boundary = rect_boundary(vmin=0., vmax=1.)
 
 	params_init = (torch.zeros((3,1)),)
 	samples, _ = sample(N, params_init, potential, boundary, step_size=step, n_leapfrog=L, n_burn=burn)
@@ -182,5 +170,51 @@ if __name__ == '__main__':
 	for i in range(3):
 		axs[i].hist(samples[:,i],density=True,bins=20)
 		axs[i].plot(x, stats.beta.pdf(x, alpha[i], beta[i]))
+
+	# Reflection test
+	N = 200
+	step = 0.3
+	L = 10
+	burn = 0
+
+	params_init = (torch.zeros((2,1)),)
+	potential = lambda _: 0 # uniform over [-1,1]x[-1,1]
+	boundary = rect_boundary(vmin=-1, vmax=1)
+
+	samples, _ = sample(N, params_init, potential, boundary, step_size=step, n_leapfrog=L, n_burn=burn, return_first=True)
+	samples = np.array([s.view(-1).numpy() for (s,) in samples])
+
+	plt.figure()
+	plt.title(f'Reflection on the square, step={step}')
+	plt.scatter(samples[:,0], samples[:,1])
+	x = np.linspace(-1,1,20)
+	ones = np.ones(x.shape)
+	plt.plot(x,ones,color='black')
+	plt.plot(ones,x,color='black')
+	plt.plot(x,-ones,color='black')
+	plt.plot(-ones,x,color='black')
+
+	# Infinite reflection test
+	N = 5
+	step = 3.0
+	L = 3
+	burn = 0
+
+	params_init = (torch.zeros((2,1)),)
+	potential = lambda _: 0 # uniform over [-1,1]x[-1,1]
+	boundary = rect_boundary(vmin=-1, vmax=1)
+
+	samples, _ = sample(N, params_init, potential, boundary, step_size=step, n_leapfrog=L, n_burn=burn, return_first=True)
+	samples = np.array([s.view(-1).numpy() for (s,) in samples])
+
+	plt.figure()
+	plt.title(f'Infinite reflection on the square, step={step}')
+	plt.scatter(samples[:,0], samples[:,1])
+	x = np.linspace(-1,1,20)
+	ones = np.ones(x.shape)
+	plt.plot(x,ones,color='black')
+	plt.plot(ones,x,color='black')
+	plt.plot(x,-ones,color='black')
+	plt.plot(-ones,x,color='black')
 
 	plt.show()

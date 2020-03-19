@@ -9,11 +9,11 @@ import sampler.hmc_nuts as hmc_nuts
 from sampler.utils import *
 
 def perturb(
-			n_samples: int, P0: torch.Tensor, dist_func: Callable, beta: float, \
-			sp_div=(1e-3, 1e-3), alpha=1, \
-			hmc_step=0.0001, hmc_random_step=False, hmc_leapfrog=25, hmc_burn=20, hmc_boundary_resolution=20, \
-			hmc_target_accept=0.75, NUTS=False 
-		):
+		n_samples: int, P0: torch.Tensor, dist_func: Callable, beta: float, 
+		sp_div=(1e-3, 1e-3), alpha=1, 
+		hmc_step=0.0001, hmc_random_step=False, hmc_leapfrog=25, hmc_burn=20, hmc_boundary_resolution=20, 
+		hmc_target_accept=0.75, NUTS=False 
+	):
 	'''
 	n_samples: number of samples to return
 	P0: nominal state operator
@@ -38,7 +38,7 @@ def perturb(
 
 	def potential(params: tuple):
 		(P,) = params
-		d_k = dist_func(P0, P).clamp(1e-8, 1)
+		d_k = dist_func(P0, P).clamp(1e-8)
 		print(d_k.item())
 		u = -pdf.log_prob(d_k)
 		return u

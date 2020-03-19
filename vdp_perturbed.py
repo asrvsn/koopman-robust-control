@@ -39,20 +39,22 @@ assert not torch.isnan(P0).any().item()
 # Sample dynamics
 
 baseline = False
-beta = 10
+beta = 5
 dist_func = euclidean_matrix_kernel if baseline else (lambda x, y: K(x, y, normalize=True)) 
-hmc_step=1e-4
-n_samples = 200
+hmc_step=1e-7
+N = 200
+L = 400
+burn = 10
 
 samples = perturb(
-	n_samples, P0, dist_func, beta,  
-	sp_div=(1e-1, 1e-1),
+	N, P0, dist_func, beta,  
+	sp_div=(1e-3, 1e-3),
 	hmc_step=hmc_step,
-  hmc_random_step=True,
-	hmc_leapfrog=25,
-  hmc_burn=30,
-  hmc_target_accept=0.75,
-  NUTS=False,
+	hmc_random_step=False,
+	hmc_leapfrog=L,
+	hmc_burn=burn,
+	hmc_target_accept=0.75,
+	NUTS=False,
 )
 
 # Save samples
@@ -67,8 +69,11 @@ t = int(n_vdp/2)
 X = X.cpu()
 
 plt.figure()
+plt.xlim(left=-7.0, right=7.0)
+plt.ylim(bottom=-7.0, top=7.0)
+plt.title(f'beta={beta}, step={hmc_step}, T={T}, distance={"Frobenius" if baseline else "Kernel"}')
 
-for Pn in samples:
+for Pn in random.choices(samples, k=20):
 	Zn = obs.extrapolate(Pn.cpu(), X, t)
 	plt.plot(Zn[0], Zn[1], color='grey', alpha=0.3, label='Numeric perturbation')
 
@@ -77,9 +82,6 @@ for Pn in samples:
 #   X = X[:t]
 #   plt.plot(X[0], X[1], color='green', alpha=0.5, label='Analytic perturbation')
 
-plt.xlim(left=-6.0, right=6.0)
-plt.ylim(bottom=-6.0, top=6.0)
-plt.title(f'beta={beta}, step={hmc_step}, T={T}, distance={"Frobenius" if baseline else "Kernel"}')
 Z0 = obs.extrapolate(P0.cpu(), X, t)
 plt.plot(Z0[0], Z0[1], label='Nominal')
 
@@ -90,9 +92,9 @@ deduped_legend()
 
 plt.figure()
 distances = [dist_func(P0, P) for P in samples]
-plt.hist(distances, bins=int(n_samples/10), density=True)
+plt.hist(distances, bins=25, density=True)
 d = np.linspace(0, 1, 100)
-p = stats.beta.pdf(d, 1.0, beta, loc=0, scale=1)
+p = stats.beta.pdf(d, 1.0, beta)
 plt.plot(d, p)
 plt.title(f'Posterior distribution, beta={beta}')
 
