@@ -4,7 +4,6 @@ import matplotlib.pyplot as plt
 from typing import Callable
 
 from sampler.utils import *
-import sampler.reflections as reflections
 
 def hamiltonian(params: tuple, momentum: tuple, potential: Callable):
 	U = potential(params)
@@ -95,8 +94,9 @@ def sample(
 if __name__ == '__main__':
 	import hamiltorch
 	import scipy.stats as stats
+	import sampler.reflections as reflections
 
-	torch.autograd.set_detect_anomaly(True)
+	# torch.autograd.set_detect_anomaly(True)
 	set_seed(9001)
 	device = 'cuda' if torch.cuda.is_available() else 'cpu'
 

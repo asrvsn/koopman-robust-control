@@ -5,7 +5,6 @@ import torch
 
 from sampler.utils import *
 import sampler.hmc as hmc
-import sampler.reflections as reflections
 
 # Multiprocessing cannot pickle lambdas
 _implicit_potential = None
@@ -42,11 +41,18 @@ def sample(
 		)
 		samples = pool.starmap(worker, args)
 
+	'''
+	TODO: correct subposterior combination? 
+	https://arxiv.org/pdf/1605.08576.pdf
+	https://arxiv.org/pdf/1311.4780.pdf
+	'''
 	samples = [s for subset in samples for s in subset]
 	return samples
 
 if __name__ == '__main__':
 	import scipy.stats as stats
+	import sampler.reflections as reflections
+
 	# torch.autograd.set_detect_anomaly(True)
 	set_seed(9001)
 	device = 'cuda' if torch.cuda.is_available() else 'cpu'
