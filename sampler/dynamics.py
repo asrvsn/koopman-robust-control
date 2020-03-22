@@ -81,7 +81,8 @@ if __name__ == '__main__':
 
 	set_seed(9001)
 	set_mp_backend()
-	device = 'cuda' if torch.cuda.is_available() else 'cpu'
+	# device = 'cuda' if torch.cuda.is_available() else 'cpu'
+	device = 'cpu'
 	# torch.autograd.set_detect_anomaly(True)
 
 	K = PFKernel(device, 2, 2, 80)
