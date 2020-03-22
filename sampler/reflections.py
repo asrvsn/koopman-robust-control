@@ -5,7 +5,13 @@ Boundary helper functions
 from typing import Callable
 import torch
 
-def lp_boundary(lp: float, vmax=float('inf'), delta=1e-2):
+from sampler.utils import *
+
+def nil_boundary(params: tuple, momentum: tuple, step: float):
+	params = zip_with(params, momentum, lambda p, m: p + step*m)
+	return params, momentum, 0.
+
+def lp_boundary(lp: float, vmax=float('inf'), delta=1e-2, offset=0):
 	'''
 	Boundary imposed on lp norm of parameter elements.
 	'''
@@ -28,6 +34,15 @@ def lp_boundary(lp: float, vmax=float('inf'), delta=1e-2):
 		return (p_cand,), momentum, 0.
 
 	return boundary
+
+def rect_boundary(vmin: float, vmax: float):
+	'''
+	Rectangular boundary imposed on parameter values.
+	'''
+	assert vmin < vmax
+	v0 = (vmin + vmax) / 2
+	c = vmax - v0
+	return lp_boundary(float('inf'), vmax=c, offset=v0)
 
 def fn_boundary(fn: Callable, vmin=-float('inf'), vmax=float('inf'), boundary_resolution=10):
 	'''

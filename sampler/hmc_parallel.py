@@ -32,7 +32,7 @@ def sample(
 	_implicit_boundary = boundary
 
 	n_problems = len(initial_conditions)
-	with multiprocessing.Pool(processes=min(10, n_problems)) as pool:
+	with multiprocessing.Pool() as pool:
 		seeds = range(1000, 1000+n_problems) if deterministic else repeat(None)
 		args = zip(
 			repeat(n_samples), initial_conditions, 
@@ -50,6 +50,7 @@ if __name__ == '__main__':
 
 	# torch.autograd.set_detect_anomaly(True)
 	set_seed(9001)
+	set_mp_backend()
 	device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
 	# Reflection test
@@ -61,7 +62,7 @@ if __name__ == '__main__':
 	pdf = torch.distributions.uniform.Uniform(torch.Tensor([[-1.0], [-1.0]]), torch.Tensor([[1.0], [1.0]]))
 	initial_conditions = [(pdf.sample(),) for _ in range(5)]
 	potential = lambda _: 0 # uniform over [-1,1]x[-1,1]
-	boundary = reflections.rect_boundary(vmin=-1, vmax=1)
+	boundary = reflections.lp_boundary(float('inf'), vmax=1)
 
 	samples = sample(N, initial_conditions, potential, boundary, step_size=step, n_leapfrog=L, n_burn=burn, deterministic=True)
 	samples = np.array([s.view(-1).numpy() for (s,) in samples])
@@ -87,14 +88,14 @@ if __name__ == '__main__':
 	def potential(params):
 		return -pdf.log_prob(params[0].view(-1)).sum()
 
-	N = 100
-	n_problems = 10
+	N = 1000
+	n_problems = 20
 	step = .3
 	L = 5
 	burn = 50
 
 	initial_conditions = [(torch.zeros((3,1)),) for _ in range(n_problems)]
-	boundary = lambda *unused: None
+	boundary = reflections.nil_boundary
 	samples = sample(N, initial_conditions, potential, boundary, step_size=step, n_leapfrog=L, n_burn=burn, deterministic=True)
 	samples = np.array([s.view(-1).numpy() for (s,) in samples]) 
 	x = np.linspace(-6,6,200)
@@ -104,31 +105,31 @@ if __name__ == '__main__':
 		axs[i].hist(samples[:,i],density=True,bins=20)
 		axs[i].plot(x, stats.norm.pdf(x, loc=mean[i], scale=var[i]))
 
-	# Beta test
-	alpha = torch.Tensor([[1.],[1.],[1.]])
-	beta = torch.Tensor([[3.],[5.],[10.]])
-	pdf = torch.distributions.beta.Beta(alpha, beta)
-	init_pdf = torch.distributions.uniform.Uniform(torch.Tensor([[0.0], [0.0], [0.0]]), torch.Tensor([[1.0], [1.0], [1.0]]))
+	# # Beta test
+	# alpha = torch.Tensor([[1.],[1.],[1.]])
+	# beta = torch.Tensor([[3.],[5.],[10.]])
+	# pdf = torch.distributions.beta.Beta(alpha, beta)
+	# init_pdf = torch.distributions.uniform.Uniform(torch.Tensor([[0.0], [0.0], [0.0]]), torch.Tensor([[1.0], [1.0], [1.0]]))
 
-	def potential(params):
-		return -pdf.log_prob(params[0].clamp(1e-8)).sum()
+	# def potential(params):
+	# 	return -pdf.log_prob(params[0].clamp(1e-8)).sum()
 
-	N = 100
-	n_problems = 10
-	step = .003 # Lower step and larger L are better for beta (since it is supported on a small interval)
-	L = 20
-	burn = 20
+	# N = 100
+	# n_problems = 10
+	# step = .003 # Lower step and larger L are better for beta (since it is supported on a small interval)
+	# L = 20
+	# burn = 20
 
-	initial_conditions = [(init_pdf.sample(),) for _ in range(n_problems)]
-	boundary = reflections.rect_boundary(vmin=0., vmax=1.)
-	samples = sample(N, initial_conditions, potential, boundary, step_size=step, n_leapfrog=L, n_burn=burn, deterministic=True)
-	samples = np.array([s.view(-1).numpy() for (s,) in samples]) 
-	x = np.linspace(0,1,100)
-	fig, axs = plt.subplots(1, 3)
-	fig.suptitle(f'sampler.hmc result, 3d beta, beta={beta.numpy().tolist()}, step={step}')
-	for i in range(3):
-		axs[i].hist(samples[:,i],density=True,bins=20)
-		axs[i].plot(x, stats.beta.pdf(x, alpha[i], beta[i]))
+	# initial_conditions = [(init_pdf.sample(),) for _ in range(n_problems)]
+	# boundary = reflections.rect_boundary(vmin=0., vmax=1.)
+	# samples = sample(N, initial_conditions, potential, boundary, step_size=step, n_leapfrog=L, n_burn=burn, deterministic=True)
+	# samples = np.array([s.view(-1).numpy() for (s,) in samples]) 
+	# x = np.linspace(0,1,100)
+	# fig, axs = plt.subplots(1, 3)
+	# fig.suptitle(f'sampler.hmc result, 3d beta, beta={beta.numpy().tolist()}, step={step}')
+	# for i in range(3):
+	# 	axs[i].hist(samples[:,i],density=True,bins=20)
+	# 	axs[i].plot(x, stats.beta.pdf(x, alpha[i], beta[i]))
 
 	plt.show()
 

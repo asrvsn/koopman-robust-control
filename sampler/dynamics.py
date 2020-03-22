@@ -60,12 +60,8 @@ def perturb(
 	print('Sampling models...')
 	pdf = torch.distributions.beta.Beta(torch.Tensor([alpha]).to(dev), torch.Tensor([beta]).to(dev))
 	def potential(params: tuple):
-		(P,) = params
-		d_k = dist_func(P0, P).clamp(1e-8)
-		if debug:
-			print(d_k.item())
-		u = -pdf.log_prob(d_k)
-		return u
+		d_k = dist_func(model, params[0]).clamp(1e-8)
+		return -pdf.log_prob(d_k)
 
 	rad = spectral_radius(model).item()
 	r_max, r_min = rad + r_div[0], rad - r_div[1]
@@ -84,6 +80,7 @@ if __name__ == '__main__':
 	import random
 
 	set_seed(9001)
+	set_mp_backend()
 	device = 'cuda' if torch.cuda.is_available() else 'cpu'
 	# torch.autograd.set_detect_anomaly(True)
 
@@ -101,46 +98,57 @@ if __name__ == '__main__':
 		# 'saddle2': np.array([[0.95,2.25],[0.20, -2.10]]), 
 	}
 
-	# Test initial conditions 
-	model = linalg.expm(systems['spiral sink'])
-	model = torch.from_numpy(model).float().to(device)
-	N = 100
-	ics = make_ics(N, model, (1e-2, 1e-2), 3e-5, 100, debug=True)
-	ds = [dist_func(model, ic).item() for ic in ics]
-	fig, axs = plt.subplots(1, 2)
-	radii = [spectral_radius(ic).item() for ic in ics]
-	axs[0].scatter(radii, [0 for _ in range(N)])
-	axs[0].set_title('Spectral radii')
-	axs[1].hist(ds, density=True, bins=int(N/3))
-	axs[1].set_title('Distribution')
-	fig.suptitle('Initial conditions from constraint set')
+	# # Test initial conditions 
+	# model = linalg.expm(systems['spiral sink'])
+	# model = torch.from_numpy(model).float().to(device)
+	# N = 100
+	# ics = make_ics(N, model, (1e-2, 1e-2), 3e-5, 100, debug=True)
+	# ds = [dist_func(model, ic).item() for ic in ics]
+	# fig, axs = plt.subplots(1, 2)
+	# radii = [spectral_radius(ic).item() for ic in ics]
+	# axs[0].scatter(radii, [0 for _ in range(N)])
+	# axs[0].set_title('Spectral radii')
+	# axs[1].hist(ds, density=True, bins=int(N/3))
+	# axs[1].set_title('Distribution')
+	# fig.suptitle('Initial conditions from constraint set')
 
-	# # Test dynamics sampler
-	# n_show = 2
-	# n_samples = 1000
-	# n_split = 100
-	# beta = 5
-	# fig, axs = plt.subplots(2 + n_show, len(systems))
+	# Test dynamics sampler
+	n_show = 3
+	n_samples = 1000
+	n_split = 100
+	beta = 5
+	fig, axs = plt.subplots(3 + n_show, len(systems))
 
-	# for i, (name, A) in enumerate(systems.items()):
+	for i, (name, A) in enumerate(systems.items()):
 
-	# 	expA = torch.from_numpy(linalg.expm(A)).float()
-	# 	samples = perturb(n_samples, expA, beta, r_div=(1e-2, 1e-2), r_step=3e-5, debug=True, dist_func=dist_func, n_split=n_split)
-	# 	sampledist = [dist_func(expA, s).item() for s in samples]
-	# 	samples = [linalg.logm(s.numpy()) for s in samples]
+		expA = torch.from_numpy(linalg.expm(A)).float()
+		samples = perturb(n_samples, expA, beta, r_div=(1e-2, 1e-2), r_step=3e-5, debug=True, dist_func=dist_func, n_split=n_split)
+		sampledist = [dist_func(expA, s).item() for s in samples]
+		samples = [linalg.logm(s.numpy()) for s in samples]
 
-	# 	# Original phase portrait
-	# 	plot_flow_field(axs[0,i], lambda x: A@x, (-4,4), (-4,4))
-	# 	axs[0,i].set_title(f'{name} - original')
+		# Original phase portrait
+		plot_flow_field(axs[0,i], lambda x: A@x, (-4,4), (-4,4))
+		axs[0,i].set_title(f'{name} - original')
 
-	# 	# Perturbed phase portraits
-	# 	for j, S in enumerate(random.choices(samples, k=n_show)):
-	# 		plot_flow_field(axs[j+1,i], lambda x: S@x, (-4,4), (-4,4))
+		# Posterior distribution
+		axs[1,i].hist(sampledist, density=True, bins=max(1, int(n_samples/4))) 
+		axs[1,i].set_title('Posterior distribution')
 
-	# 	# Posterior distribution
-	# 	axs[-1,i].hist(sampledist, density=True, bins=max(1, int(n_samples/4))) 
-	# 	axs[-1,i].set_title('Posterior distribution')
+		# Trace-determinant plot
+		tr = [np.trace(S) for S in samples]
+		det = [np.linalg.det(S) for S in samples]
+		axis = np.linspace(-4, 4, 60)
+		axs[2,i].plot(axis, np.zeros(60), color='black')
+		axs[2,i].plot(np.zeros(30), np.linspace(0,4,30), color='black')
+		axs[2,i].plot(axis, (axis**2)/4, color='black')
+		axs[2,i].plot(tr, det, color='blue')
+		axs[2,i].plot([np.trace(A)], [np.det(A)], color='orange')
+		axs[2,i].set_title('Trace-determinant plane')
 
-	# fig.suptitle('Perturbations of 2x2 LTI systems')
+		# Perturbed phase portraits
+		for j, S in enumerate(random.choices(samples, k=n_show)):
+			plot_flow_field(axs[j+3,i], lambda x: S@x, (-4,4), (-4,4))
+
+	fig.suptitle('Perturbations of 2x2 LTI systems')
 
 	plt.show()

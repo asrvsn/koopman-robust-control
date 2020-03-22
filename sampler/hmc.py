@@ -123,7 +123,7 @@ if __name__ == '__main__':
 	# 	return -pdf.log_prob(params[0].view(-1)).sum()
 
 	# params_init = (torch.zeros((3,1)),)
-	# boundary = lambda *unused: None
+	# boundary = reflections.nil_boundary
 	# samples, _ = sample(N, params_init, potential, boundary, step_size=step, n_leapfrog=L, n_burn=burn)
 	# samples = np.array([s.view(-1).numpy() for (s,) in samples]) 
 	# x = np.linspace(-6,6,200)
