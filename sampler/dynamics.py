@@ -101,46 +101,46 @@ if __name__ == '__main__':
 		# 'saddle2': np.array([[0.95,2.25],[0.20, -2.10]]), 
 	}
 
-	# # Test initial conditions 
-	# model = linalg.expm(systems['spiral sink'])
-	# model = torch.from_numpy(model).float().to(device)
-	# N = 50
-	# ics = make_ics(N, model, (1e-2, 1e-2), 3e-5, 100, debug=True)
-	# ds = [dist_func(model, ic).item() for ic in ics]
-	# fig, axs = plt.subplots(1, 2)
-	# radii = [spectral_radius(ic).item() for ic in ics]
-	# axs[0].scatter(radii, [0 for _ in range(N)])
-	# axs[0].set_title('Spectral radii')
-	# axs[1].hist(ds, density=True, bins=int(N/3))
-	# axs[1].set_title('Distribution')
-	# fig.suptitle('Initial conditions from constraint set')
+	# Test initial conditions 
+	model = linalg.expm(systems['spiral sink'])
+	model = torch.from_numpy(model).float().to(device)
+	N = 100
+	ics = make_ics(N, model, (1e-2, 1e-2), 3e-5, 100, debug=True)
+	ds = [dist_func(model, ic).item() for ic in ics]
+	fig, axs = plt.subplots(1, 2)
+	radii = [spectral_radius(ic).item() for ic in ics]
+	axs[0].scatter(radii, [0 for _ in range(N)])
+	axs[0].set_title('Spectral radii')
+	axs[1].hist(ds, density=True, bins=int(N/3))
+	axs[1].set_title('Distribution')
+	fig.suptitle('Initial conditions from constraint set')
 
-	# Test dynamics sampler
-	n_show = 2
-	n_samples = 5
-	n_split = 5
-	beta = 5
-	fig, axs = plt.subplots(2 + n_show, len(systems))
+	# # Test dynamics sampler
+	# n_show = 2
+	# n_samples = 1000
+	# n_split = 100
+	# beta = 5
+	# fig, axs = plt.subplots(2 + n_show, len(systems))
 
-	for i, (name, A) in enumerate(systems.items()):
+	# for i, (name, A) in enumerate(systems.items()):
 
-		expA = torch.from_numpy(linalg.expm(A)).float()
-		samples = perturb(n_samples, expA, beta, r_div=(1e-2, 1e-2), r_step=3e-5, debug=True, dist_func=dist_func, n_split=n_split)
-		sampledist = [dist_func(expA, s).item() for s in samples]
-		samples = [linalg.logm(s.numpy()) for s in samples]
+	# 	expA = torch.from_numpy(linalg.expm(A)).float()
+	# 	samples = perturb(n_samples, expA, beta, r_div=(1e-2, 1e-2), r_step=3e-5, debug=True, dist_func=dist_func, n_split=n_split)
+	# 	sampledist = [dist_func(expA, s).item() for s in samples]
+	# 	samples = [linalg.logm(s.numpy()) for s in samples]
 
-		# Original phase portrait
-		plot_flow_field(axs[0,i], lambda x: A@x, (-4,4), (-4,4))
-		axs[0,i].set_title(f'{name} - original')
+	# 	# Original phase portrait
+	# 	plot_flow_field(axs[0,i], lambda x: A@x, (-4,4), (-4,4))
+	# 	axs[0,i].set_title(f'{name} - original')
 
-		# Perturbed phase portraits
-		for j, S in enumerate(random.choices(samples, n_show)):
-			plot_flow_field(axs[j+1,i], lambda x: S@x, (-4,4), (-4,4))
+	# 	# Perturbed phase portraits
+	# 	for j, S in enumerate(random.choices(samples, k=n_show)):
+	# 		plot_flow_field(axs[j+1,i], lambda x: S@x, (-4,4), (-4,4))
 
-		# Posterior distribution
-		axs[-1,i].hist(sampledist, density=True, bins=int(n_samples/4)) 
-		axs[-1,i].set_title('Posterior distribution')
+	# 	# Posterior distribution
+	# 	axs[-1,i].hist(sampledist, density=True, bins=max(1, int(n_samples/4))) 
+	# 	axs[-1,i].set_title('Posterior distribution')
 
-	fig.suptitle('Perturbations of 2x2 LTI systems')
+	# fig.suptitle('Perturbations of 2x2 LTI systems')
 
 	plt.show()
