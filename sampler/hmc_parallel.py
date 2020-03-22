@@ -41,11 +41,6 @@ def sample(
 		)
 		samples = pool.starmap(worker, args)
 
-	'''
-	TODO: correct subposterior combination? 
-	https://arxiv.org/pdf/1605.08576.pdf
-	https://arxiv.org/pdf/1311.4780.pdf
-	'''
 	samples = [s for subset in samples for s in subset]
 	return samples
 
