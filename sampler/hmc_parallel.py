@@ -13,18 +13,18 @@ _implicit_boundary = None
 def worker(
 		n_samples: int, init_params: tuple, 
 		step_size: float, n_leapfrog: int, n_burn: int, random_step: bool, debug: bool, return_first: bool,
-		max_refl: int, seed: Any
+		seed: Any
 	):	
 	if seed is not None:
 		set_seed(seed)
-	samples, ratio = hmc.sample(n_samples, init_params, _implicit_potential, _implicit_boundary, step_size=step_size, n_leapfrog=n_leapfrog, n_burn=n_burn, random_step=random_step, debug=debug, return_first=return_first, max_refl=max_refl)
+	samples, ratio = hmc.sample(n_samples, init_params, _implicit_potential, _implicit_boundary, step_size=step_size, n_leapfrog=n_leapfrog, n_burn=n_burn, random_step=random_step, debug=debug, return_first=return_first)
 	print(f'Ratio: {ratio}')
 	return samples
 
 def sample(
 		n_samples: int, initial_conditions: list, potential: Callable, boundary: Callable,
 		step_size=0.03, n_leapfrog=10, n_burn=10, random_step=False, debug=False, return_first=False, 
-		max_refl=100, deterministic=True
+		deterministic=True
 	):
 
 	global _implicit_potential, _implicit_boundary
@@ -37,7 +37,7 @@ def sample(
 		args = zip(
 			repeat(n_samples), initial_conditions, 
 			repeat(step_size), repeat(n_leapfrog), repeat(n_burn), repeat(random_step), repeat(debug), repeat(return_first),
-			repeat(max_refl), seeds
+			seeds
 		)
 		samples = pool.starmap(worker, args)
 

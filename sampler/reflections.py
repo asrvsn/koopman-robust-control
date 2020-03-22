@@ -5,29 +5,28 @@ Boundary helper functions
 from typing import Callable
 import torch
 
-def rect_boundary(vmin=-float('inf'), vmax=float('inf')):
+def lp_boundary(lp: float, vmax=float('inf'), delta=1e-2):
 	'''
-	Rectangular boundary imposed on parameter elements.
+	Boundary imposed on lp norm of parameter elements.
 	'''
-	assert vmin < vmax
 	def boundary(params: tuple, momentum: tuple, step: float):
 		p, m = params[0], momentum[0] # TODO generalize to n-d
 		p_cand = p + step*m
-		p_max, p_min = p_cand.max(), p_cand.min()
-		m_para = torch.zeros_like(m, device=m.device)
 
-		if p_max > vmax:
-			grad = torch.autograd.grad(p_max, p_cand)[0]
-			m_para = m_para + ((m.t()@grad) / (grad.t()@grad)) * grad
-		if p_min < vmin:
-			grad = torch.autograd.grad(p_min, p_cand)[0]
-			m_para = m_para + ((m.t()@grad) / (grad.t()@grad)) * grad
-
-		if (m_para != 0).any():
-			p_cand = p_cand.clamp(min=vmin, max=vmax)
+		if p_cand.norm(p=lp) > vmax:
+			p_cand = p.detach()
+			eps = step
+			while (p_cand + delta*m).norm(p=lp) <= vmax:
+				p_cand += delta*m
+				eps -= delta
+			p_cand = p_cand.requires_grad_()
+			grad = torch.autograd.grad(p_cand.norm(p=lp), p_cand)[0]
+			m_para = ((m.t()@grad) / (grad.t()@grad)) * grad
 			m_refl = m - 2*m_para
-			return ((p_cand.detach().requires_grad_(),), (m_refl.detach().requires_grad_(),)) # Avoid building graph across successive reflections
-		return None
+			return (p_cand.detach().requires_grad_(),), (m_refl.detach().requires_grad_(),), eps
+
+		return (p_cand,), momentum, 0
+
 	return boundary
 
 def fn_boundary(fn: Callable, vmin=-float('inf'), vmax=float('inf'), boundary_resolution=10):

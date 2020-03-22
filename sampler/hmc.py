@@ -14,7 +14,7 @@ def gibbs(params: tuple):
 	return tuple(torch.distributions.Normal(torch.zeros_like(w), torch.ones_like(w)).sample() for w in params)
 
 def leapfrog(
-		params: tuple, momentum: tuple, potential: Callable, boundary: Callable, n_leapfrog: int, step_size: float, max_refl: int, 
+		params: tuple, momentum: tuple, potential: Callable, boundary: Callable, n_leapfrog: int, step_size: float, 
 		zero_nan=False, debug=False
 	):
 	def params_grad(p):
@@ -31,18 +31,10 @@ def leapfrog(
 
 	for n in range(n_leapfrog):
 
-		# Reflect particle until not in violation of boundary 
-		r_i = 0
-		bc = boundary(params, momentum, step_size)
-		while bc is not None and r_i < max_refl: 
-			r_i += 1
-			if debug:
-				print('Reflected!', r_i)
-			(params, momentum) = bc
-			bc = boundary(params, momentum, step_size)
-
-		if bc is None: # Safe to take a step
-			params = zip_with(params, momentum, lambda p, m: p + step_size*m)
+		eps = step_size
+		while eps > 0: # While path length remains
+			params, momentum, eps = boundary(params, momentum, eps)
+			print(eps)
 
 		momentum = zip_with(momentum, params_grad(params), lambda m, dp: m - step_size*dp)
 
@@ -56,8 +48,7 @@ def accept(h_old: torch.Tensor, h_new: torch.Tensor):
 
 def sample(
 		n_samples: int, init_params: tuple, potential: Callable, boundary: Callable, 
-		step_size=0.03, n_leapfrog=10, n_burn=10, random_step=False, debug=False, return_first=False,
-		max_refl=100
+		step_size=0.03, n_leapfrog=10, n_burn=10, random_step=False, debug=False, return_first=False
 	):
 	'''
 	Leapfrog HMC 
@@ -76,7 +67,7 @@ def sample(
 			eps = torch.normal(step_size, 2*step_size, (1,)).clamp(step_size/10)
 		else:
 			eps = step_size
-		params, momentum = leapfrog(params, momentum, potential, boundary, n_leapfrog, eps, max_refl, debug=debug)
+		params, momentum = leapfrog(params, momentum, potential, boundary, n_leapfrog, eps, debug=debug)
 
 		params = tuple(w.detach().requires_grad_() for w in params)
 		h_new = hamiltonian(params, momentum, potential)
@@ -102,123 +93,123 @@ if __name__ == '__main__':
 	set_seed(9001)
 	device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
-	'''
-	Gaussian distribution
-	'''
-	mean = torch.Tensor([0.,0.,0.])
-	var = torch.Tensor([.5,1.,2.])**2
-	pdf = torch.distributions.MultivariateNormal(mean, torch.diag(var))
+	# '''
+	# Gaussian distribution
+	# '''
+	# mean = torch.Tensor([0.,0.,0.])
+	# var = torch.Tensor([.5,1.,2.])**2
+	# pdf = torch.distributions.MultivariateNormal(mean, torch.diag(var))
 
-	def log_prob(omega):
-		return pdf.log_prob(omega).sum()
+	# def log_prob(omega):
+	# 	return pdf.log_prob(omega).sum()
 
-	N = 1000
-	step = .3
-	L = 5
-	burn = 50
+	# N = 1000
+	# step = .3
+	# L = 5
+	# burn = 50
 
-	params_init = torch.zeros(3)
-	samples = hamiltorch.sample(log_prob_func=log_prob, params_init=params_init, num_samples=N, step_size=step, num_steps_per_sample=L)
-	samples = np.array([s.numpy() for s in samples])
-	x = np.linspace(-6,6,200)
-	fig, axs = plt.subplots(1, 3)
-	fig.suptitle(f'hamiltorch result, 3d gaussian, var={var.numpy().tolist()}, step={step}')
-	for i in range(3):
-		axs[i].hist(samples[:,i],density=True,bins=20)
-		axs[i].plot(x, stats.norm.pdf(x, loc=mean[i], scale=var[i]))
+	# params_init = torch.zeros(3)
+	# samples = hamiltorch.sample(log_prob_func=log_prob, params_init=params_init, num_samples=N, step_size=step, num_steps_per_sample=L)
+	# samples = np.array([s.numpy() for s in samples])
+	# x = np.linspace(-6,6,200)
+	# fig, axs = plt.subplots(1, 3)
+	# fig.suptitle(f'hamiltorch result, 3d gaussian, var={var.numpy().tolist()}, step={step}')
+	# for i in range(3):
+	# 	axs[i].hist(samples[:,i],density=True,bins=20)
+	# 	axs[i].plot(x, stats.norm.pdf(x, loc=mean[i], scale=var[i]))
 
-	def potential(params):
-		return -pdf.log_prob(params[0].view(-1)).sum()
+	# def potential(params):
+	# 	return -pdf.log_prob(params[0].view(-1)).sum()
 
-	params_init = (torch.zeros((3,1)),)
-	boundary = lambda *unused: None
-	samples, _ = sample(N, params_init, potential, boundary, step_size=step, n_leapfrog=L, n_burn=burn)
-	samples = np.array([s.view(-1).numpy() for (s,) in samples]) 
-	x = np.linspace(-6,6,200)
-	fig, axs = plt.subplots(1, 3)
-	fig.suptitle(f'sampler.hmc result, 3d gaussian, var={var.numpy().tolist()}, step={step}')
-	for i in range(3):
-		axs[i].hist(samples[:,i],density=True,bins=20)
-		axs[i].plot(x, stats.norm.pdf(x, loc=mean[i], scale=var[i]))
+	# params_init = (torch.zeros((3,1)),)
+	# boundary = lambda *unused: None
+	# samples, _ = sample(N, params_init, potential, boundary, step_size=step, n_leapfrog=L, n_burn=burn)
+	# samples = np.array([s.view(-1).numpy() for (s,) in samples]) 
+	# x = np.linspace(-6,6,200)
+	# fig, axs = plt.subplots(1, 3)
+	# fig.suptitle(f'sampler.hmc result, 3d gaussian, var={var.numpy().tolist()}, step={step}')
+	# for i in range(3):
+	# 	axs[i].hist(samples[:,i],density=True,bins=20)
+	# 	axs[i].plot(x, stats.norm.pdf(x, loc=mean[i], scale=var[i]))
 
-	'''
-	Beta distribution
-	'''
-	alpha = torch.Tensor([1,1,1])
-	beta = torch.Tensor([3,5,10])
-	pdf = torch.distributions.beta.Beta(alpha, beta)
+	# '''
+	# Beta distribution
+	# '''
+	# alpha = torch.Tensor([1,1,1])
+	# beta = torch.Tensor([3,5,10])
+	# pdf = torch.distributions.beta.Beta(alpha, beta)
 
-	def log_prob(omega):
-		return pdf.log_prob(omega.clamp(1e-8)).sum()
+	# def log_prob(omega):
+	# 	return pdf.log_prob(omega.clamp(1e-8)).sum()
 
-	N = 1000
-	step = .003 # Lower step and larger L are better for beta (since it is supported on a small interval)
-	L = 20
-	burn = 0
+	# N = 1000
+	# step = .003 # Lower step and larger L are better for beta (since it is supported on a small interval)
+	# L = 20
+	# burn = 0
 
-	params_init = torch.zeros(3)
-	samples = hamiltorch.sample(log_prob_func=log_prob, params_init=params_init, num_samples=N, step_size=step, num_steps_per_sample=L)
-	samples = np.array([s.numpy() for s in samples])
-	x = np.linspace(0,1,100)
-	fig, axs = plt.subplots(1, 3)
-	fig.suptitle(f'hamiltorch result, 3d beta, beta={beta.numpy().tolist()}, step={step}')
-	for i in range(3):
-		axs[i].hist(samples[:,i],density=True,bins=20)
-		axs[i].plot(x, stats.beta.pdf(x, alpha[i], beta[i]))
+	# params_init = torch.zeros(3)
+	# samples = hamiltorch.sample(log_prob_func=log_prob, params_init=params_init, num_samples=N, step_size=step, num_steps_per_sample=L)
+	# samples = np.array([s.numpy() for s in samples])
+	# x = np.linspace(0,1,100)
+	# fig, axs = plt.subplots(1, 3)
+	# fig.suptitle(f'hamiltorch result, 3d beta, beta={beta.numpy().tolist()}, step={step}')
+	# for i in range(3):
+	# 	axs[i].hist(samples[:,i],density=True,bins=20)
+	# 	axs[i].plot(x, stats.beta.pdf(x, alpha[i], beta[i]))
 
-	def potential(params):
-		return -pdf.log_prob(params[0].view(-1).clamp(1e-8)).sum()
+	# def potential(params):
+	# 	return -pdf.log_prob(params[0].view(-1).clamp(1e-8)).sum()
 
-	boundary = reflections.rect_boundary(vmin=0., vmax=1.)
+	# boundary = reflections.rect_boundary(vmin=0., vmax=1.)
 
-	params_init = (torch.zeros((3,1)),)
-	samples, _ = sample(N, params_init, potential, boundary, step_size=step, n_leapfrog=L, n_burn=burn)
-	samples = np.array([s.view(-1).numpy() for (s,) in samples]) 
-	x = np.linspace(0,1,100)
-	fig, axs = plt.subplots(1, 3)
-	fig.suptitle(f'sampler.hmc result, 3d beta, beta={beta.numpy().tolist()}, step={step}')
-	for i in range(3):
-		axs[i].hist(samples[:,i],density=True,bins=20)
-		axs[i].plot(x, stats.beta.pdf(x, alpha[i], beta[i]))
+	# params_init = (torch.zeros((3,1)),)
+	# samples, _ = sample(N, params_init, potential, boundary, step_size=step, n_leapfrog=L, n_burn=burn)
+	# samples = np.array([s.view(-1).numpy() for (s,) in samples]) 
+	# x = np.linspace(0,1,100)
+	# fig, axs = plt.subplots(1, 3)
+	# fig.suptitle(f'sampler.hmc result, 3d beta, beta={beta.numpy().tolist()}, step={step}')
+	# for i in range(3):
+	# 	axs[i].hist(samples[:,i],density=True,bins=20)
+	# 	axs[i].plot(x, stats.beta.pdf(x, alpha[i], beta[i]))
 
-	'''
-	Reflection test
-	HMC with hard constraints
-	'''
-	N = 200
-	step = 0.3
-	L = 10
-	burn = 0
+	# '''
+	# Reflection test
+	# HMC with hard constraints
+	# '''
+	# N = 200
+	# step = 0.3
+	# L = 10
+	# burn = 0
 
-	params_init = (torch.zeros((2,1)),)
-	potential = lambda _: 0 # uniform over [-1,1]x[-1,1]
-	boundary = reflections.rect_boundary(vmin=-1, vmax=1)
+	# params_init = (torch.zeros((2,1)),)
+	# potential = lambda _: 0 # uniform over [-1,1]x[-1,1]
+	# boundary = reflections.lp_boundary(10, vmax=1)
 
-	samples, _ = sample(N, params_init, potential, boundary, step_size=step, n_leapfrog=L, n_burn=burn, return_first=True)
-	samples = np.array([s.view(-1).numpy() for (s,) in samples])
+	# samples, _ = sample(N, params_init, potential, boundary, step_size=step, n_leapfrog=L, n_burn=burn, return_first=True)
+	# samples = np.array([s.view(-1).numpy() for (s,) in samples])
 
-	plt.figure()
-	plt.title(f'Reflection on the square, step={step}')
-	plt.scatter(samples[:,0], samples[:,1])
-	x = np.linspace(-1,1,20)
-	ones = np.ones(x.shape)
-	plt.plot(x,ones,color='black')
-	plt.plot(ones,x,color='black')
-	plt.plot(x,-ones,color='black')
-	plt.plot(-ones,x,color='black')
+	# plt.figure()
+	# plt.title(f'Reflection on the l2 limit, step={step}')
+	# plt.scatter(samples[:,0], samples[:,1])
+	# x = np.linspace(-1,1,20)
+	# ones = np.ones(x.shape)
+	# plt.plot(x,ones,color='black')
+	# plt.plot(ones,x,color='black')
+	# plt.plot(x,-ones,color='black')
+	# plt.plot(-ones,x,color='black')
 
 	'''
 	Overstepped reflection test 
 	Illustrates phenomenon where reflective HMC will mostly return results at the boundaries if step size is too high.
 	'''
 	N = 40
-	step = 3.0
-	L = 3 # Make arbitrarily large
+	step = 3.0 # Make arbitrarily large
+	L = 3
 	burn = 0
 
 	params_init = (torch.zeros((2,1)),)
 	potential = lambda _: 0 # uniform over [-1,1]x[-1,1]
-	boundary = reflections.rect_boundary(vmin=-1, vmax=1)
+	boundary = reflections.lp_boundary(2, delta=0.1, vmax=1)
 
 	samples, _ = sample(N, params_init, potential, boundary, step_size=step, n_leapfrog=L, n_burn=burn, return_first=True)
 	samples = np.array([s.view(-1).numpy() for (s,) in samples])
