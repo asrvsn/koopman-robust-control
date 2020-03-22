@@ -25,7 +25,7 @@ def lp_boundary(lp: float, vmax=float('inf'), delta=1e-2):
 			m_refl = m - 2*m_para
 			return (p_cand.detach().requires_grad_(),), (m_refl.detach().requires_grad_(),), eps
 
-		return (p_cand,), momentum, 0
+		return (p_cand,), momentum, 0.
 
 	return boundary
 
@@ -36,31 +36,36 @@ def fn_boundary(fn: Callable, vmin=-float('inf'), vmax=float('inf'), boundary_re
 	assert vmin < vmax
 	def boundary(params: tuple, momentum: tuple, step: float):
 		p, m = params[0], momentum[0] # TODO generalize to n-d
-		v = fn(p + m*step)
+		p_cand = p + step*m
+		v = fn(p_cand)
 
 		if v > vmax:
-			micro_step = step/boundary_resolution
+			eps = step
+			delta = step/boundary_resolution
 			p_cand = p.detach()
-			while fn(p) < vmax:
-				p_cand += micro_step*m
+			while fn(p_cand + delta*m) <= vmax:
+				p_cand += delta*m
+				eps -= delta
 			p_cand = p_cand.requires_grad_()
 			# Reflect along plane orthogonal to gradient
 			grad = torch.autograd.grad(fn(p_cand), p_cand)[0]
 			m_para = (torch.trace(m.t()@grad) / torch.trace(grad.t()@grad)) * grad
 			m_refl = m - 2*m_para
-			return ((p_cand.detach().requires_grad_(),), (m_refl.detach().requires_grad_(),))
+			return (p_cand.detach().requires_grad_(),), (m_refl.detach().requires_grad_(),), eps
 
 		elif v < vmin:
-			micro_step = step/boundary_resolution
+			delta = step/boundary_resolution
+			eps = step
 			p_cand = p.detach()
 			while fn(p) > vmin:
-				p_cand += micro_step*m
+				p_cand += delta*m
+				eps -= delta
 			p_cand = p_cand.requires_grad_()
 			# Reflect along plane orthogonal to gradient
 			grad = -torch.autograd.grad(fn(p_cand), p_cand)[0]
 			m_para = (torch.trace(m.t()@grad) / torch.trace(grad.t()@grad)) * grad
 			m_refl = m - 2*m_para
-			return ((p_cand.detach().requires_grad_(),), (m_refl.detach().requires_grad_(),))
+			return (p_cand.detach().requires_grad_(),), (m_refl.detach().requires_grad_(),), eps
 
-		return None
+		return (p_cand,), momentum, 0.
 	return boundary

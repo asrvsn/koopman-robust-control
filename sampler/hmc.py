@@ -31,10 +31,11 @@ def leapfrog(
 
 	for n in range(n_leapfrog):
 
+		old_eps = None
 		eps = step_size
-		while eps > 0: # While path length remains
+		while old_eps is None or np.abs(eps - old_eps) > 1e-12: # While path is being exhausted
+			old_eps = eps
 			params, momentum, eps = boundary(params, momentum, eps)
-			print(eps)
 
 		momentum = zip_with(momentum, params_grad(params), lambda m, dp: m - step_size*dp)
 
@@ -172,50 +173,25 @@ if __name__ == '__main__':
 	# 	axs[i].hist(samples[:,i],density=True,bins=20)
 	# 	axs[i].plot(x, stats.beta.pdf(x, alpha[i], beta[i]))
 
-	# '''
-	# Reflection test
-	# HMC with hard constraints
-	# '''
-	# N = 200
-	# step = 0.3
-	# L = 10
-	# burn = 0
-
-	# params_init = (torch.zeros((2,1)),)
-	# potential = lambda _: 0 # uniform over [-1,1]x[-1,1]
-	# boundary = reflections.lp_boundary(10, vmax=1)
-
-	# samples, _ = sample(N, params_init, potential, boundary, step_size=step, n_leapfrog=L, n_burn=burn, return_first=True)
-	# samples = np.array([s.view(-1).numpy() for (s,) in samples])
-
-	# plt.figure()
-	# plt.title(f'Reflection on the l2 limit, step={step}')
-	# plt.scatter(samples[:,0], samples[:,1])
-	# x = np.linspace(-1,1,20)
-	# ones = np.ones(x.shape)
-	# plt.plot(x,ones,color='black')
-	# plt.plot(ones,x,color='black')
-	# plt.plot(x,-ones,color='black')
-	# plt.plot(-ones,x,color='black')
-
 	'''
-	Overstepped reflection test 
-	Illustrates phenomenon where reflective HMC will mostly return results at the boundaries if step size is too high.
+	Reflection test
+	HMC with hard constraints
 	'''
-	N = 40
-	step = 3.0 # Make arbitrarily large
-	L = 3
+	N = 200
+	step = 0.3
+	L = 10
 	burn = 0
+	lp = float('inf')
 
 	params_init = (torch.zeros((2,1)),)
 	potential = lambda _: 0 # uniform over [-1,1]x[-1,1]
-	boundary = reflections.lp_boundary(2, delta=0.1, vmax=1)
+	boundary = reflections.lp_boundary(lp, vmax=1)
 
 	samples, _ = sample(N, params_init, potential, boundary, step_size=step, n_leapfrog=L, n_burn=burn, return_first=True)
 	samples = np.array([s.view(-1).numpy() for (s,) in samples])
 
 	plt.figure()
-	plt.title(f'Overstepped reflection on the square, step={step}')
+	plt.title(f'Reflection on the l-{lp} bound, step={step}')
 	plt.scatter(samples[:,0], samples[:,1])
 	x = np.linspace(-1,1,20)
 	ones = np.ones(x.shape)
@@ -223,5 +199,33 @@ if __name__ == '__main__':
 	plt.plot(ones,x,color='black')
 	plt.plot(x,-ones,color='black')
 	plt.plot(-ones,x,color='black')
+
+	# '''
+	# Overstepped reflection test 
+	# Illustrates phenomenon where reflective HMC will mostly return results at the boundaries if step size is too high.
+	# '''
+	# N = 40
+	# step = 10.0 # Make arbitrarily large
+	# L = 3
+	# burn = 0
+	# lp = float('inf')
+
+	# params_init = (torch.zeros((2,1)),)
+	# potential = lambda _: 0 # uniform over [-1,1]x[-1,1]
+	# boundary = reflections.lp_boundary(lp, delta=0.1, vmax=1)
+
+	# samples, _ = sample(N, params_init, potential, boundary, step_size=step, n_leapfrog=L, n_burn=burn, return_first=True)
+	# samples = np.array([s.view(-1).numpy() for (s,) in samples])
+	# print(samples)
+
+	# plt.figure()
+	# plt.title(f'Overstepped reflection on the l-{lp} bound, step={step}')
+	# plt.scatter(samples[:,0], samples[:,1])
+	# x = np.linspace(-1,1,20)
+	# ones = np.ones(x.shape)
+	# plt.plot(x,ones,color='black')
+	# plt.plot(ones,x,color='black')
+	# plt.plot(x,-ones,color='black')
+	# plt.plot(-ones,x,color='black')
 
 	plt.show()
