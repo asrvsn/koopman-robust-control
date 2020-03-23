@@ -15,8 +15,8 @@ systems = {
 }
 
 semistable_systems = {
-	'spiral sink': np.array([[-1.,1.],[-1.25, -0.45]]), 
-	'nodal sink ': np.array([[-0.05,-3.00],[0.35, -3.45]]), 
+	# 'spiral sink': np.array([[-1.,1.],[-1.25, -0.45]]), 
+	# 'nodal sink ': np.array([[-0.05,-3.00],[0.35, -3.45]]), 
 	'center': np.array([[-1.05,-3.60],[1.10, 1.05]]), 
 }
 
