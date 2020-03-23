@@ -1,6 +1,5 @@
 import torch
 import numpy as np
-import scipy.linalg as linalg
 import matplotlib.pyplot as plt
 
 import settings as settings
@@ -29,12 +28,12 @@ fig, axs = plt.subplots(3 + n_show, len(semistable_systems))
 
 for i, (name, A) in enumerate(semistable_systems.items()):
 
-	expA = torch.from_numpy(linalg.expm(A)).float()
+	expA = torch.from_numpy(diff_to_transferop(A)).float()
 	print(name, spectral_radius(expA).item())
 	
 	samples = perturb(n_samples, expA, beta, r_div=(1e-2, 1e-2), r_step=3e-5, dist_func=dist_func, n_split=n_split)
 	sampledist = [dist_func(expA, s).item() for s in samples]
-	samples = [linalg.logm(s.numpy(), disp=False) for s in samples]
+	samples = [transferop_to_diff(s.numpy()) for s in samples]
 
 	# Original phase portrait
 	plot_flow_field(axs[0,i], lambda x: A@x, (-4,4), (-4,4))

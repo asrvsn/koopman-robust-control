@@ -5,6 +5,7 @@ import random
 import torch
 import matplotlib.pyplot as plt
 import matplotlib
+import scipy.linalg as linalg
 
 def set_seed(seed: int):
 	random.seed(seed)
@@ -127,6 +128,12 @@ def plot_trace_determinant(ax, A, tr_range, det_range, n_grid=60):
 	ax.plot(axis, (axis**2)/4, color='black')
 	ax.scatter([np.trace(A)], [np.linalg.det(A)], color='orange')
 	return ax
+
+def diff_to_transferop(A: np.ndarray):
+	return linalg.expm(A)
+
+def transferop_to_diff(A: np.ndarray):
+	return linalg.logm(A, disp=False)[0]
 
 '''
 Tests
