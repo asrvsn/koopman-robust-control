@@ -11,10 +11,20 @@ systems = {
 	'center': np.array([[-1.05,-3.60],[1.10, 1.05]]), 
 	'saddle1': np.array([[0.70,-2.55],[-0.10, -2.50]]), 
 	'saddle2': np.array([[0.95,2.25],[0.20, -2.10]]), 
+	'saddle3': np.array([[-0.30,1.40],[0.55, 0.40]]), 
+}
+
+semistable_systems = {
+	'spiral sink': np.array([[-1.,1.],[-1.25, -0.45]]), 
+	'nodal sink ': np.array([[-0.05,-3.00],[0.35, -3.45]]), 
+	'center': np.array([[-1.05,-3.60],[1.10, 1.05]]), 
 }
 
 if __name__ == '__main__': 
 	import matplotlib.pyplot as plt
+	import scipy.linalg as linalg
+
+	# Trace/determinant plots	
 	fig, axs = plt.subplots(2, len(systems), figsize=(12,4))
 	for i, (name, A) in enumerate(systems.items()):
 		axs[0,i].set_title(name)
