@@ -19,8 +19,8 @@ K = PFKernel(device, 2, 2, 80)
 dist_func = lambda x, y: K(x, y, normalize=True) 
 
 n_show = 3
-n_samples = 500
-n_split = 50
+n_samples = 1000
+n_split = 100
 beta = 5
 results = {}
 
