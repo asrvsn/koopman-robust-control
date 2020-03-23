@@ -2,6 +2,7 @@ import torch
 import numpy as np
 import hickle as hkl
 
+import sampler.reflections as reflections
 from sampler.utils import *
 from sampler.kernel import *
 from sampler.dynamics import *
@@ -11,17 +12,13 @@ set_seed(9001)
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 # torch.autograd.set_detect_anomaly(True)
 
-baseline = True
-
-if baseline:
-	dist_func = euclidean_matrix_kernel
-else:
-	K = PFKernel(device, 2, 2, 80)
-	dist_func = lambda x, y: K(x, y, normalize=True) 
+method = 'baseline'
+# method = 'kernel'
+# method = 'constrained_kernel'
 
 n_show = 3
-n_samples = 1000
-n_split = 100
+n_samples = 4
+n_split = 2
 beta = 5
 results = {}
 step = 1e-4
@@ -29,17 +26,26 @@ step = 1e-4
 for i, (name, A) in enumerate(semistable_systems.items()):
 
 	nominal = torch.from_numpy(diff_to_transferop(A)).float()
-	print(name, spectral_radius(nominal).item())
 	
-	samples = perturb(n_samples, nominal, beta, r_div=(1e-2, 1e-2), r_step=3e-5, dist_func=dist_func, n_split=n_split, hmc_step=step)
-	sampledist = [dist_func(nominal, s).item() for s in samples]
+	if method == 'baseline':
+		samples, posterior = perturb(n_samples, nominal, beta, dist_func=euclidean_matrix_kernel, boundary=reflections.nil_boundary, n_split=n_split, hmc_step=step)
+	elif method == 'kernel':
+		T = 80
+		samples, posterior = perturb(n_samples, nominal, beta, boundary=reflections.nil_boundary, n_split=n_split, hmc_step=step, kernel_T=T)
+	elif method == 'constrained_kernel':
+		# print(name, spectral_radius(nominal).item())
+		r_div=(1e-2, 1e-2)
+		r_step = 3e-5
+		T = 80
+		samples, posterior = perturb(n_samples, nominal, beta, r_div=r_div, r_step=r_step, n_split=n_split, hmc_step=step, kernel_T=T)
+
 	samples = [transferop_to_diff(s.numpy()) for s in samples]
 
 	results[name] = {
 		'nominal': A,
-		'posterior': sampledist,
+		'posterior': posterior,
 		'samples': samples,
 	}
 
 print('Saving..')
-hkl.dump(results, f'saved/2x2{"_baseline" if baseline else ""}.hkl')
+hkl.dump(results, f'saved/2x2_{method}.hkl')

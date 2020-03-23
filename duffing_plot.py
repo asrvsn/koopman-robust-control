@@ -8,7 +8,7 @@ from sampler.utils import *
 from sampler.features import *
 
 # Initial conditions
-n_init = 5
+n_init = 11
 x0s = np.linspace(-2.0, 2.0, n_init)
 xdot0s = np.linspace(-2.0, 2.0, n_init)
 

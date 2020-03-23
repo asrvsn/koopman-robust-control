@@ -14,7 +14,8 @@ from sampler.utils import *
 
 def perturb(
 		max_samples: int, model: torch.Tensor, beta: float,
-		n_split=20, dist_func=None, r_div=(1e-3, 1e-3), r_step=1e-5, r_leapfrog=100, alpha=1., 
+		n_split=20, dist_func=None, boundary=None,
+		r_div=(1e-2, 1e-2), r_step=1e-5, r_leapfrog=100, alpha=1., 
 		hmc_step=1e-6, hmc_leapfrog=100, hmc_burn=0, 
 		hmc_random_step=False, hmc_deterministic=True, debug=False, 
 		kernel_m=2, kernel_T=80
@@ -37,23 +38,27 @@ def perturb(
 	dev = model.device
 	n_split = min(max_samples, n_split)
 
-	# Sample initial conditions uniformly from constraint set 
-	print('Generating initial conditions...')
-	rad = spectral_radius(model).item()
-	r_max, r_min = rad + r_div[0], rad - r_div[1]
-	boundary = reflections.fn_boundary(spectral_radius, vmin=r_min, vmax=r_max)
-	potential = lambda _: 0 # Uniform 
-	ics, ratio = hmc.sample(n_split, (model,), potential, boundary, step_size=r_step, n_leapfrog=r_leapfrog, n_burn=0, random_step=False, return_first=True, debug=debug)
-	if debug:
-		print('IC acceptance ratio:', ratio)
+	# Initialize sample bounds
+	if boundary is None:
+		rad = spectral_radius(model).item()
+		r_max, r_min = rad + r_div[0], rad - r_div[1]
+		boundary = reflections.fn_boundary(spectral_radius, vmin=r_min, vmax=r_max)
 
-	# Combine parallel HMC samples from initial conditions
-	print('Sampling models...')
+	# Initialize operator kernel
 	if dist_func is None:
 		assert len(model.shape) == 2 and model.shape[0] == model.shape[1], "Subspace kernel valid for square matrices only"
 		K = PFKernel(dev, model.shape[0], kernel_m, kernel_T)
 		dist_func = lambda x, y: K(x, y, normalize=True) 
 
+	# Sample initial conditions uniformly from constraint set 
+	print('Generating initial conditions...')
+	potential = lambda _: 0 # Uniform 
+	ics, ratio = hmc.sample(n_split, (model,), potential, boundary, step_size=r_step, n_leapfrog=r_leapfrog, n_burn=0, random_step=False, return_first=True, debug=debug)
+	if debug:
+		print('IC acceptance ratio:', ratio)
+
+	# Combine parallel HMC samples across initial conditions
+	print('Sampling models...')
 	pdf = torch.distributions.beta.Beta(torch.Tensor([alpha]).to(dev), torch.Tensor([beta]).to(dev))
 	def potential(params: tuple):
 		d_k = dist_func(model, params[0]).clamp(1e-8)
@@ -63,8 +68,9 @@ def perturb(
 	n_subsamples = int(max_samples / n_split)
 	samples = hmc_parallel.sample(n_subsamples, ics, potential, boundary, step_size=hmc_step, n_leapfrog=hmc_leapfrog, n_burn=hmc_burn, random_step=hmc_random_step, return_first=True, debug=debug)
 	samples = [s for (s,) in samples]
+	posterior = [dist_func(model, s).item() for s in samples]
 
-	return samples
+	return samples, posterior
 
 # if __name__ == '__main__':
 	# import matplotlib.pyplot as plt
