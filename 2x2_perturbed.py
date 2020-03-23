@@ -28,7 +28,7 @@ for i, (name, A) in enumerate(semistable_systems.items()):
 	
 	samples = perturb(n_samples, expA, beta, r_div=(1e-2, 1e-2), r_step=3e-5, dist_func=dist_func, n_split=n_split)
 	sampledist = [dist_func(expA, s).item() for s in samples]
-	samples = [linalg.logm(s.numpy()) for s in samples]
+	samples = [linalg.logm(s.numpy(), disp=False) for s in samples]
 
 	# Original phase portrait
 	plot_flow_field(axs[0,i], lambda x: A@x, (-4,4), (-4,4))
