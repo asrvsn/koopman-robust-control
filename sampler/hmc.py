@@ -16,7 +16,7 @@ def gibbs(params: tuple):
 
 def leapfrog(
 		params: tuple, momentum: tuple, potential: Callable, boundary: Callable, n_leapfrog: int, step_size: float, 
-		zero_nan=False, debug=False, collision_resolution=20
+		zero_nan=False, debug=False, collision_resolution=20, max_refl=100
 	):
 	def params_grad(p):
 		p = tuple(w.detach().requires_grad_() for w in p)
@@ -34,9 +34,11 @@ def leapfrog(
 
 		old_eps = None
 		eps = step_size
-		while old_eps is None or np.abs(eps - old_eps) > (step_size/collision_resolution): # While path is being exhausted
+		r_i = 0
+		while (old_eps is None or np.abs(eps - old_eps) > (step_size/collision_resolution)) and r_i < max_refl: # While path is being exhausted
 			old_eps = eps
 			params, momentum, eps = boundary(params, momentum, eps)
+			r_i += 1
 
 		momentum = zip_with(momentum, params_grad(params), lambda m, dp: m - step_size*dp)
 
