@@ -3,6 +3,7 @@ from itertools import repeat
 import multiprocessing
 import torch
 from tqdm import tqdm
+import traceback
 
 from sampler.utils import *
 import sampler.hmc as hmc
@@ -16,10 +17,14 @@ def worker(
 		step_size: float, n_leapfrog: int, n_burn: int, random_step: bool, debug: bool, return_first: bool,
 		seed: Any
 	):	
-	if seed is not None:
-		set_seed(seed)
-	samples, ratio = hmc.sample(n_samples, init_params, _implicit_potential, _implicit_boundary, step_size=step_size, n_leapfrog=n_leapfrog, n_burn=n_burn, random_step=random_step, debug=debug, return_first=return_first, show_progress=False)
-	return samples
+	try:
+		if seed is not None:
+			set_seed(seed)
+		samples, ratio = hmc.sample(n_samples, init_params, _implicit_potential, _implicit_boundary, step_size=step_size, n_leapfrog=n_leapfrog, n_burn=n_burn, random_step=random_step, debug=debug, return_first=return_first, show_progress=False)
+		return samples
+	except:
+		print(traceback.format_exc())
+		return []
 
 def sample(
 		n_samples: int, initial_conditions: list, potential: Callable, boundary: Callable,
@@ -47,9 +52,8 @@ def sample(
 				), callback=add_samples))
 			pool.close()
 			pool.join()
-			[w.get() for w in workers] # Propagate errors from children
 
-		return samples
+	return samples
 
 if __name__ == '__main__':
 	import scipy.stats as stats
