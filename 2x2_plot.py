@@ -4,7 +4,7 @@ import numpy as np
 
 from sampler.utils import *
 
-results = hkl.load('saved/2x2.hkl')
+results = hkl.load('saved/2x2_baseline.hkl')
 
 n_show = 3
 fig, axs = plt.subplots(4 + n_show, len(results))
