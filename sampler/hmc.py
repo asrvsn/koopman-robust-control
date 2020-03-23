@@ -2,6 +2,7 @@ import torch
 import numpy as np
 import matplotlib.pyplot as plt
 from typing import Callable
+from tqdm import tqdm
 
 from sampler.utils import *
 
@@ -49,7 +50,8 @@ def accept(h_old: torch.Tensor, h_new: torch.Tensor):
 
 def sample(
 		n_samples: int, init_params: tuple, potential: Callable, boundary: Callable, 
-		step_size=0.03, n_leapfrog=10, n_burn=10, random_step=False, debug=False, return_first=False
+		step_size=0.03, n_leapfrog=10, n_burn=10, random_step=False, debug=False, return_first=False,
+		show_progress=True
 	):
 	'''
 	Leapfrog HMC 
@@ -60,6 +62,7 @@ def sample(
 	params = tuple(x.clone().requires_grad_() for x in init_params)
 	ret_params = [init_params] if return_first else []
 	n = 0
+	pbar = tqdm(total=n_samples, desc='HMC') if show_progress else None
 	while len(ret_params) < n_samples:
 		momentum = gibbs(params)
 		h_old = hamiltonian(params, momentum, potential)
@@ -75,11 +78,11 @@ def sample(
 
 		if accept(h_old, h_new) and n > n_burn:
 			ret_params.append(params)
-			if debug:
-				print('Accepted')
+			if show_progress: pbar.update(1)
 
 		n += 1
 
+	if show_progress: pbar.close()
 	ratio = len(ret_params) / (n - n_burn)
 	ret_params = list(map(lambda p: tuple(map(lambda x: x.detach(), p)), ret_params))
 	return ret_params, ratio

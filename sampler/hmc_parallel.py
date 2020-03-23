@@ -2,6 +2,7 @@ from typing import Callable, Any
 from itertools import repeat
 import multiprocessing
 import torch
+from tqdm import tqdm
 
 from sampler.utils import *
 import sampler.hmc as hmc
@@ -17,8 +18,7 @@ def worker(
 	):	
 	if seed is not None:
 		set_seed(seed)
-	samples, ratio = hmc.sample(n_samples, init_params, _implicit_potential, _implicit_boundary, step_size=step_size, n_leapfrog=n_leapfrog, n_burn=n_burn, random_step=random_step, debug=debug, return_first=return_first)
-	print(f'Ratio: {ratio}')
+	samples, ratio = hmc.sample(n_samples, init_params, _implicit_potential, _implicit_boundary, step_size=step_size, n_leapfrog=n_leapfrog, n_burn=n_burn, random_step=random_step, debug=debug, return_first=return_first, show_progress=False)
 	return samples
 
 def sample(
@@ -32,19 +32,22 @@ def sample(
 	_implicit_boundary = boundary
 
 	samples = []
-	def add_samples(results: list):
-		samples.extend(results)
+	with tqdm(total=n_samples*len(initial_conditions), desc='Parallel HMC') as pbar:
 
-	with multiprocessing.Pool() as pool:
-		for i, ic in enumerate(initial_conditions):
-			seed = 1000+i if deterministic else None
-			pool.apply_async(worker, args=(
-				n_samples, ic, step_size, n_leapfrog, n_burn, random_step, debug, return_first, seed
-			), callback=add_samples)
-		pool.close()
-		pool.join()
+		def add_samples(results: list):
+			samples.extend(results)
+			pbar.update(n_samples)
 
-	return samples
+		with multiprocessing.Pool() as pool:
+			for i, ic in enumerate(initial_conditions):
+				seed = 1000+i if deterministic else None
+				pool.apply_async(worker, args=(
+					n_samples, ic, step_size, n_leapfrog, n_burn, random_step, debug, return_first, seed
+				), callback=add_samples)
+			pool.close()
+			pool.join()
+
+		return samples
 
 if __name__ == '__main__':
 	import scipy.stats as stats
@@ -52,7 +55,6 @@ if __name__ == '__main__':
 
 	# torch.autograd.set_detect_anomaly(True)
 	set_seed(9001)
-	set_mp_backend()
 	device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
 	# # Reflection test
@@ -99,6 +101,7 @@ if __name__ == '__main__':
 	initial_conditions = [(torch.zeros((3,1)),) for _ in range(n_problems)]
 	boundary = reflections.nil_boundary
 	samples = sample(N, initial_conditions, potential, boundary, step_size=step, n_leapfrog=L, n_burn=burn, deterministic=True)
+	samples = [s[0] for s in samples]
 	x = np.linspace(-6,6,200)
 	fig, axs = plt.subplots(1, 3)
 	fig.suptitle(f'sampler.hmc_parallel on 3d gaussian, var={var.numpy().tolist()}, step={step}')
