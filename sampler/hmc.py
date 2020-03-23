@@ -35,10 +35,12 @@ def leapfrog(
 		old_eps = None
 		eps = step_size
 		r_i = 0
-		while (old_eps is None or np.abs(eps - old_eps) > (step_size/collision_resolution)) and r_i < max_refl: # While path is being exhausted
+		while old_eps is None or np.abs(eps - old_eps) > (step_size/collision_resolution): # While path is being exhausted
 			old_eps = eps
 			params, momentum, eps = boundary(params, momentum, eps)
 			r_i += 1
+			if r_i > max_refl:
+				raise Exception('Maximum reflections exceeded')
 
 		momentum = zip_with(momentum, params_grad(params), lambda m, dp: m - step_size*dp)
 
