@@ -59,7 +59,7 @@ y_samples = 3
 n_samples = 100
 n_split = 20
 
-samples = perturb(n_samples, nominal, dist_func, beta, r_div=(1e-2, 1e-2), r_step=3e-5, n_split=n_split, hmc_step=step)
+samples = perturb(n_samples, nominal, beta, dist_func=dist_func, r_div=(1e-2, 1e-2), r_step=3e-5, n_split=n_split, hmc_step=step)
 sampledist = [dist_func(nominal, s).item() for s in samples]
 
 results = {
