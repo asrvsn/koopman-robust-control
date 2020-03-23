@@ -17,8 +17,8 @@ method = 'baseline'
 # method = 'constrained_kernel'
 
 n_show = 3
-n_samples = 4
-n_split = 2
+n_samples = 1000
+n_split = 50
 beta = 5
 results = {}
 step = 1e-4
