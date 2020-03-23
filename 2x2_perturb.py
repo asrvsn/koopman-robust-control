@@ -11,7 +11,7 @@ set_seed(9001)
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 # torch.autograd.set_detect_anomaly(True)
 
-baseline = False
+baseline = True
 
 if baseline:
 	dist_func = euclidean_matrix_kernel
