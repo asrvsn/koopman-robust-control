@@ -11,16 +11,6 @@ import sampler.reflections as reflections
 from sampler.kernel import *
 from sampler.utils import *
 
-def make_ics(N: int, model: torch.Tensor, r_div: tuple, step: float, leapfrog: int, debug=False):
-	rad = spectral_radius(model).item()
-	r_max, r_min = rad + r_div[0], rad - r_div[1]
-	boundary = reflections.fn_boundary(spectral_radius, vmin=r_min, vmax=r_max)
-	potential = lambda _: 0 # Uniform 
-	ics, ratio = hmc.sample(N, (model,), potential, boundary, step_size=step, n_leapfrog=leapfrog, n_burn=0, random_step=False, return_first=True, debug=debug)
-	ics = [ic[0] for ic in ics]
-	if debug:
-		print('IC acceptance ratio:', ratio)
-	return ics
 
 def perturb(
 		max_samples: int, model: torch.Tensor, beta: float,
@@ -47,57 +37,58 @@ def perturb(
 	dev = model.device
 	n_split = min(max_samples, n_split)
 
+	# Sample initial conditions uniformly from constraint set 
+	print('Generating initial conditions...')
+	rad = spectral_radius(model).item()
+	r_max, r_min = rad + r_div[0], rad - r_div[1]
+	boundary = reflections.fn_boundary(spectral_radius, vmin=r_min, vmax=r_max)
+	potential = lambda _: 0 # Uniform 
+	ics, ratio = hmc.sample(n_split, (model,), potential, boundary, step_size=r_step, n_leapfrog=r_leapfrog, n_burn=0, random_step=False, return_first=True, debug=debug)
+	if debug:
+		print('IC acceptance ratio:', ratio)
+
+	# Combine parallel HMC samples from initial conditions
+	print('Sampling models...')
 	if dist_func is None:
 		assert len(model.shape) == 2 and model.shape[0] == model.shape[1], "Subspace kernel valid for square matrices only"
 		K = PFKernel(dev, model.shape[0], kernel_m, kernel_T)
 		dist_func = lambda x, y: K(x, y, normalize=True) 
 
-	# Sample initial conditions uniformly from constraint set 
-	print('Generating initial conditions...')
-	ics = make_ics(n_split, model, r_div, r_step, r_leapfrog, debug=debug)
-
-	# Combine parallel HMC samples from initial conditions
-	print('Sampling models...')
 	pdf = torch.distributions.beta.Beta(torch.Tensor([alpha]).to(dev), torch.Tensor([beta]).to(dev))
 	def potential(params: tuple):
 		d_k = dist_func(model, params[0]).clamp(1e-8)
 		# print(d_k.item())
 		return -pdf.log_prob(d_k)
 
-	rad = spectral_radius(model).item()
-	r_max, r_min = rad + r_div[0], rad - r_div[1]
-	boundary = reflections.fn_boundary(spectral_radius, vmin=r_min, vmax=r_max)
-
 	n_subsamples = int(max_samples / n_split)
-	ics = [(ic,) for ic in ics]
 	samples = hmc_parallel.sample(n_subsamples, ics, potential, boundary, step_size=hmc_step, n_leapfrog=hmc_leapfrog, n_burn=hmc_burn, random_step=hmc_random_step, return_first=True, debug=debug)
 	samples = [s for (s,) in samples]
 
 	return samples
 
-if __name__ == '__main__':
-	import matplotlib.pyplot as plt
-	import scipy.linalg as linalg 
-	import random
+# if __name__ == '__main__':
+	# import matplotlib.pyplot as plt
+	# import scipy.linalg as linalg 
+	# import random
 
-	from systems.lti2x2 import systems
+	# from systems.lti2x2 import systems
 
-	set_seed(9001)
-	device = 'cuda' if torch.cuda.is_available() else 'cpu'
-	# torch.autograd.set_detect_anomaly(True)
+	# set_seed(9001)
+	# device = 'cuda' if torch.cuda.is_available() else 'cpu'
+	# # torch.autograd.set_detect_anomaly(True)
 
-	# Test initial conditions 
-	model = linalg.expm(systems['spiral sink'])
-	model = torch.from_numpy(model).float().to(device)
-	N = 100
-	ics = make_ics(N, model, (1e-2, 1e-2), 3e-5, 100, debug=True)
-	ds = [dist_func(model, ic).item() for ic in ics]
-	fig, axs = plt.subplots(1, 2)
-	radii = [spectral_radius(ic).item() for ic in ics]
-	axs[0].scatter(radii, [0 for _ in range(N)])
-	axs[0].set_title('Spectral radii')
-	axs[1].hist(ds, density=True, bins=int(N/3))
-	axs[1].set_title('Distribution')
-	fig.suptitle('Initial conditions from constraint set')
+	# # Test initial conditions 
+	# model = linalg.expm(systems['spiral sink'])
+	# model = torch.from_numpy(model).float().to(device)
+	# N = 100
+	# ics = make_ics(N, model, (1e-2, 1e-2), 3e-5, 100, debug=True)
+	# ds = [dist_func(model, ic).item() for ic in ics]
+	# fig, axs = plt.subplots(1, 2)
+	# radii = [spectral_radius(ic).item() for ic in ics]
+	# axs[0].scatter(radii, [0 for _ in range(N)])
+	# axs[0].set_title('Spectral radii')
+	# axs[1].hist(ds, density=True, bins=int(N/3))
+	# axs[1].set_title('Distribution')
+	# fig.suptitle('Initial conditions from constraint set')
 
-	plt.show()
+	# plt.show()

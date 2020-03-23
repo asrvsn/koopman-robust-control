@@ -48,12 +48,12 @@ if baseline:
 	dist_func = euclidean_matrix_kernel
 else:
 	d, m, T = PsiX.shape[0], 2, 20
-	K = PFKernel(device, 2, 2, 80)
+	K = PFKernel(device, d, m, T)
 	dist_func = lambda x, y: K(x, y, normalize=True) 
 
 
 beta = 5
-step = 1e-5
+step = 1e-4
 x_samples = 6
 y_samples = 3
 n_samples = 100
