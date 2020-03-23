@@ -58,9 +58,14 @@ def fn_boundary(fn: Callable, vmin=-float('inf'), vmax=float('inf'), boundary_re
 			eps = step
 			delta = step/boundary_resolution
 			p_cand = p.detach()
+			j = 0
 			while fn(p_cand + delta*m) <= vmax:
 				p_cand += delta*m
 				eps -= delta
+				j += 1
+				if j > boundary_resolution + 5: 
+					print('vmax:', vmax, fn(p_cand).item())
+					raise Exception('vmax loop')
 			p_cand = p_cand.requires_grad_()
 			# Reflect along plane orthogonal to gradient
 			grad = torch.autograd.grad(fn(p_cand), p_cand)[0]
@@ -78,7 +83,8 @@ def fn_boundary(fn: Callable, vmin=-float('inf'), vmax=float('inf'), boundary_re
 				eps -= delta
 				j += 1
 				if j > boundary_resolution + 5: 
-					raise Exception('what!')
+					print('vmin:', vmin, fn(p_cand).item())
+					raise Exception('vmin loop')
 			p_cand = p_cand.requires_grad_()
 			# Reflect along plane orthogonal to gradient
 			grad = -torch.autograd.grad(fn(p_cand), p_cand)[0]
