@@ -10,7 +10,13 @@ set_seed(9001)
 
 A = systems['spiral sink']
 model = torch.from_numpy(linalg.expm(A)).float()
+print(model)
 
+# # Initial conditions
+# N = 10
+# ics = make_ics(N, model, (1e-2, 1e-2), 3e-5, 50, debug=True)
+
+# Perturbations
 n_samples = 10
 n_split = 5
 beta = 5

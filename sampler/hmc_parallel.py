@@ -18,7 +18,6 @@ def worker(
 	if seed is not None:
 		set_seed(seed)
 	samples, ratio = hmc.sample(n_samples, init_params, _implicit_potential, _implicit_boundary, step_size=step_size, n_leapfrog=n_leapfrog, n_burn=n_burn, random_step=random_step, debug=debug, return_first=return_first)
-	samples = [s.numpy() for (s,) in samples]
 	print(f'Ratio: {ratio}')
 	return samples
 
@@ -45,7 +44,7 @@ def sample(
 		pool.close()
 		pool.join()
 
-	return np.array(samples)
+	return samples
 
 if __name__ == '__main__':
 	import scipy.stats as stats

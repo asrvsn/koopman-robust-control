@@ -18,7 +18,13 @@ def zip_with(X: tuple, Y: tuple, f: Callable):
 	return tuple(f(x,y) for (x,y) in zip(X, Y))
 
 def spectral_radius(A: torch.Tensor, eps=None, n_iter=None):
-	if eps is None and n_iter is None:
+	if A.shape[0] == A.shape[1] == 2: # compute directly for 2x2
+		tr, det = A.trace(), A.det()
+		if (tr**2 - 4*det) >= 0:
+			return torch.abs(tr + torch.sqrt(tr**2 - 4*det)) / 2
+		else:
+			return torch.sqrt((tr/2)**2 + (4*det-tr**2)/4)
+	elif eps is None and n_iter is None:
 		# return _sp_radius_conv(A, 1e-4)
 		return _sp_radius_niter(A, 1000)
 	elif eps is not None:
@@ -129,7 +135,22 @@ if __name__ == '__main__':
 	set_seed(9001)
 	device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
-	# Power iteration test
+	prec = 1e-2
+
+	# 2d spectral radius test
+	for _ in range(1000):
+		d = 2
+		A = torch.randn((d, d), device=device)
+		e = np.random.uniform(0.1, 2.00)
+		L = torch.linspace(e, 0.01, d, device=device)
+		P = torch.mm(torch.mm(A, torch.diag(L)), torch.pinverse(A))
+
+		np_e_max = np.abs(np.linalg.eigvals(P.cpu().numpy())).max()
+		pwr_e_max = spectral_radius(P).item()
+		print('True:', e, 'numpy:', np_e_max, 'pwr_iter:', pwr_e_max)
+		assert np.abs(e - pwr_e_max) < prec
+
+	# Nd Power iteration test
 	for _ in range(1000):
 		d = 100
 		A = torch.randn((d, d), device=device)
@@ -140,4 +161,4 @@ if __name__ == '__main__':
 		np_e_max = np.abs(np.linalg.eigvals(P.cpu().numpy())).max()
 		pwr_e_max = spectral_radius(P).item()
 		print('True:', e, 'numpy:', np_e_max, 'pwr_iter:', pwr_e_max)
-		# assert np.abs(np_e_max - pwr_e_max) <= prec
+		assert np.abs(e - pwr_e_max) < prec

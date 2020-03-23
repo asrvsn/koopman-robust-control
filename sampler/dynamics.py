@@ -25,7 +25,7 @@ def make_ics(N: int, model: torch.Tensor, r_div: tuple, step: float, leapfrog: i
 def perturb(
 		max_samples: int, model: torch.Tensor, beta: float,
 		n_split=20, dist_func=None, r_div=(1e-3, 1e-3), r_step=1e-5, r_leapfrog=100, alpha=1., 
-		hmc_step=1e-6, hmc_leapfrog=100, hmc_burn=20, 
+		hmc_step=1e-6, hmc_leapfrog=100, hmc_burn=0, 
 		hmc_random_step=False, hmc_deterministic=True, debug=False, 
 		kernel_m=2, kernel_T=80
 	):

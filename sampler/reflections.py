@@ -44,7 +44,7 @@ def rect_boundary(vmin: float, vmax: float):
 	c = vmax - v0
 	return lp_boundary(float('inf'), vmax=c, offset=v0)
 
-def fn_boundary(fn: Callable, vmin=-float('inf'), vmax=float('inf'), boundary_resolution=10):
+def fn_boundary(fn: Callable, vmin=-float('inf'), vmax=float('inf'), boundary_resolution=20):
 	'''
 	1D boundary imposed on differentiable scalar function of parameters.
 	'''
@@ -69,10 +69,10 @@ def fn_boundary(fn: Callable, vmin=-float('inf'), vmax=float('inf'), boundary_re
 			return (p_cand.detach().requires_grad_(),), (m_refl.detach().requires_grad_(),), eps
 
 		elif v < vmin:
-			delta = step/boundary_resolution
 			eps = step
+			delta = step/boundary_resolution
 			p_cand = p.detach()
-			while fn(p) > vmin:
+			while fn(p_cand + delta*m) >= vmin:
 				p_cand += delta*m
 				eps -= delta
 			p_cand = p_cand.requires_grad_()
