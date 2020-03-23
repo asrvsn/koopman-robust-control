@@ -1,6 +1,13 @@
 import torch
 import numpy as np
 import scipy.linalg as linalg
+import matplotlib.pyplot as plt
+
+import settings as settings
+if settings.GCP:
+	torch.multiprocessing.set_sharing_strategy('file_system')
+	import matplotlib
+	matplotlib.use('tkagg')
 
 from sampler.utils import *
 from sampler.kernel import *
@@ -8,7 +15,6 @@ from sampler.dynamics import *
 from systems.lti2x2 import semistable_systems
 
 set_seed(9001)
-# set_mp_backend()
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 # torch.autograd.set_detect_anomaly(True)
 

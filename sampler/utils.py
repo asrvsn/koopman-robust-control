@@ -11,9 +11,6 @@ def set_seed(seed: int):
 	np.random.seed(seed)
 	torch.manual_seed(seed)
 
-def set_mp_backend():
-	matplotlib.use('tkagg')
-
 def zip_with(X: tuple, Y: tuple, f: Callable):
 	return tuple(f(x,y) for (x,y) in zip(X, Y))
 

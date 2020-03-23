@@ -47,7 +47,7 @@ def sample(
 				), callback=add_samples))
 			pool.close()
 			pool.join()
-			[w.get() for w in workers]
+			[w.get() for w in workers] # Propagate errors from children
 
 		return samples
 
