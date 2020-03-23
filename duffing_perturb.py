@@ -42,7 +42,7 @@ nominal = nominal.to(device)
 assert not torch.isnan(nominal).any().item()
 
 # Sample dynamics
-baseline = True
+baseline = False
 
 if baseline:
 	dist_func = euclidean_matrix_kernel

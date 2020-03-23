@@ -24,7 +24,7 @@ n_samples = 1000
 n_split = 100
 beta = 5
 results = {}
-step = 1e-5
+step = 1e-4
 
 for i, (name, A) in enumerate(semistable_systems.items()):
 
