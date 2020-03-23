@@ -79,6 +79,8 @@ if __name__ == '__main__':
 	import scipy.linalg as linalg 
 	import random
 
+	from systems.lti2x2 import systems
+
 	set_seed(9001)
 	set_mp_backend()
 	# device = 'cuda' if torch.cuda.is_available() else 'cpu'
@@ -87,17 +89,6 @@ if __name__ == '__main__':
 
 	K = PFKernel(device, 2, 2, 80)
 	dist_func = lambda x, y: K(x, y, normalize=True) 
-
-	# Various 2x2 LTI systems 
-	systems = {
-		'spiral sink': np.array([[-1.,-3.],[2., 1.]]), 
-		'spiral source': np.array([[-1.,-3.],[2., 1.5]]), 
-		# 'nodal source': np.array([[-3.75,-2.15],[2.05, 1.05]]), 
-		# 'nodal sink ': np.array([[-0.05,-3.00],[0.35, -3.45]]), 
-		# 'center': np.array([[-1.05,-3.60],[1.10, 1.05]]), 
-		# 'saddle1': np.array([[0.70,-2.55],[-0.10, -2.50]]), 
-		# 'saddle2': np.array([[0.95,2.25],[0.20, -2.10]]), 
-	}
 
 	# # Test initial conditions 
 	# model = linalg.expm(systems['spiral sink'])

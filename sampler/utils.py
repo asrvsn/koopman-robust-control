@@ -110,6 +110,18 @@ def plot_flow_field(ax, f, u_range, v_range, n_grid=100):
 
     return ax
 
+def plot_trace_determinant(ax, A, tr_range, det_range, n_grid=60):
+	# Trace-determinant plot
+	assert A.shape[0] == A.shape[1] == 2
+	axis = np.linspace(tr_range[0], tr_range[1], n_grid)
+	ax.set_xlim(left=tr_range[0],right=tr_range[1])
+	ax.set_ylim(bottom=det_range[0],top=det_range[1])
+	ax.plot(axis, np.zeros(n_grid), color='black')
+	ax.plot(np.zeros(int(n_grid/2)), np.linspace(0,tr_range[1],int(n_grid/2)), color='black')
+	ax.plot(axis, (axis**2)/4, color='black')
+	ax.scatter([np.trace(A)], [np.linalg.det(A)], color='orange')
+	return ax
+
 '''
 Tests
 '''
