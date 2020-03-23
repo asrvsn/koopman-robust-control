@@ -83,7 +83,7 @@ def fn_boundary(fn: Callable, vmin=-float('inf'), vmax=float('inf'), boundary_re
 				eps -= delta
 				j += 1
 				if j > boundary_resolution + 5: 
-					print('vmin:', vmin, fn(p_cand).item())
+					print('vmin:', vmin, 'current:', fn(p_cand).item(), 'violating:', fn(p+step*m).item())
 					raise Exception('vmin loop')
 			p_cand = p_cand.requires_grad_()
 			# Reflect along plane orthogonal to gradient
