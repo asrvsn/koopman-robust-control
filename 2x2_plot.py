@@ -17,22 +17,24 @@ for i, (name, data) in enumerate(results.items()):
 
 	# Original phase portrait
 	plot_flow_field(axs[0,i], lambda x: A@x, (-4,4), (-4,4))
-	axs[0,i].set_title(f'{name} - original')
-
-	# Posterior distribution
-	axs[1,i].hist(posterior, density=True, bins=max(1, int(len(posterior)/4))) 
-	axs[1,i].set_title('Posterior distribution')
-
-	# Trace-determinant plot
-	plot_trace_determinant(axs[2,i], A, (-4,4), (-4,4))
-	tr = [np.trace(S) for S in samples]
-	det = [np.linalg.det(S) for S in samples]
-	axs[2,i].scatter(tr, det, color='blue', alpha=0.5)
-	axs[2,i].set_title('Trace-determinant plane')
+	axs[0,i].set_title(f'{name} - nominal')
 
 	# Perturbed phase portraits
+	axs[1,i].set_title('Perturbed')
 	for j, S in enumerate(random.choices(samples, k=n_show)):
-		plot_flow_field(axs[j+3,i], lambda x: S@x, (-4,4), (-4,4))
+		plot_flow_field(axs[j+1,i], lambda x: S@x, (-4,4), (-4,4))
+
+	# Posterior distribution
+	axs[-2,i].hist(posterior, density=True, bins=max(1, int(len(posterior)/4))) 
+	# axs[-2,i].set_title('Posterior distribution')
+
+	# Trace-determinant plot
+	plot_trace_determinant(axs[-1,i], A, (-4,4), (-4,4))
+	tr = [np.trace(S) for S in samples]
+	det = [np.linalg.det(S) for S in samples]
+	axs[-1,i].scatter(tr, det, color='blue', marker='+', alpha=0.5)
+	# axs[-1,i].set_title('Trace-determinant plane')
 
 fig.suptitle('Perturbations of 2x2 LTI semistable_systems')
+# fig.tight_layout(pad=0.01)
 plt.show()

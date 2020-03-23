@@ -1,12 +1,15 @@
 from typing import Callable, Any
 from itertools import repeat
 import multiprocessing
-import torch
 from tqdm import tqdm
 import traceback
+import torch
 
 from sampler.utils import *
 import sampler.hmc as hmc
+
+# https://github.com/pytorch/pytorch/issues/973
+torch.multiprocessing.set_sharing_strategy('file_system')
 
 # Multiprocessing cannot pickle lambdas
 _implicit_potential = None

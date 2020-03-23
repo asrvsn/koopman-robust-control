@@ -2,10 +2,6 @@ import torch
 import numpy as np
 import hickle as hkl
 
-import settings as settings
-if settings.GCP:
-	torch.multiprocessing.set_sharing_strategy('file_system')
-
 from sampler.utils import *
 from sampler.kernel import *
 from sampler.dynamics import *
@@ -15,8 +11,13 @@ set_seed(9001)
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 # torch.autograd.set_detect_anomaly(True)
 
-K = PFKernel(device, 2, 2, 80)
-dist_func = lambda x, y: K(x, y, normalize=True) 
+baseline = True
+
+if baseline:
+	dist_func = euclidean_matrix_kernel
+else:
+	K = PFKernel(device, 2, 2, 80)
+	dist_func = lambda x, y: K(x, y, normalize=True) 
 
 n_show = 3
 n_samples = 1000
@@ -40,4 +41,4 @@ for i, (name, A) in enumerate(semistable_systems.items()):
 	}
 
 print('Saving..')
-hkl.dump(results, 'saved/2x2.hkl')
+hkl.dump(results, f'saved/2x2{"_baseline" if baseline else ""}.hkl')
