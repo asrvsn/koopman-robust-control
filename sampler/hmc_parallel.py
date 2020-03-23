@@ -44,7 +44,7 @@ def sample(
 
 		def add_samples(results: list):
 			samples.extend(results)
-			pbar.update(n_samples)
+			pbar.update(len(results))
 
 		with multiprocessing.Pool() as pool:
 			workers = []

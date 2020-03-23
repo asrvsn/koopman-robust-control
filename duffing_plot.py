@@ -14,7 +14,7 @@ xdot0s = np.linspace(-2.0, 2.0, n_init)
 # Plot
 results = hkl.load('saved/duffing.hkl')
 nominal = torch.from_numpy(results['nominal']).float()
-sampledist = results['sampledist']
+posterior = results['posterior']
 samples = [torch.from_numpy(s).float() for s in results['samples']]
 
 t = 800
@@ -67,7 +67,7 @@ for perturbed in random.choices(samples, k=y_samples*x_samples):
 deduped_legend()
 
 plt.figure()
-plt.hist(sampledist, density=True, bins=int(len(sampledist)/4))
+plt.hist(posterior, density=True, bins=int(len(posterior)/4))
 plt.title('Posterior distribution')
 
 plt.show()

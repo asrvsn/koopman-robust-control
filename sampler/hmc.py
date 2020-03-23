@@ -66,7 +66,7 @@ def sample(
 	params = tuple(x.clone().requires_grad_() for x in init_params)
 	ret_params = [init_params] if return_first else []
 	n = 0
-	pbar = tqdm(total=n_samples, desc='HMC') if show_progress else None
+	if show_progress: pbar = tqdm(total=n_samples, desc='HMC') 
 	while len(ret_params) < n_samples:
 		momentum = gibbs(params)
 		h_old = hamiltonian(params, momentum, potential)
