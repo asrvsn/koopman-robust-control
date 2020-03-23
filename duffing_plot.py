@@ -5,14 +5,19 @@ import torch
 import random
 
 from sampler.utils import *
+from sampler.features import *
 
 # Initial conditions
-n_init = 12
+n_init = 5
 x0s = np.linspace(-2.0, 2.0, n_init)
 xdot0s = np.linspace(-2.0, 2.0, n_init)
 
+# Init features
+p, d, k = 5, 2, 15
+obs = PolynomialObservable(p, d, k)
+
 # Plot
-results = hkl.load('saved/duffing.hkl')
+results = hkl.load('saved/duffing_baseline.hkl')
 nominal = torch.from_numpy(results['nominal']).float()
 posterior = results['posterior']
 samples = [torch.from_numpy(s).float() for s in results['samples']]
@@ -35,12 +40,9 @@ plt.title('Nominal extrapolation of the Duffing Oscillator')
 for x0 in x0s:
 	for xdot0 in xdot0s:
 		x = torch.Tensor([[x0], [xdot0]])
-		Z0 = obs.extrapolate(nominal, x, t)
-		label, color = get_label(Z0[:, -1]).numpy()
-		if label != 'Unstable':
-			plt.plot(Z0[0], Z0[1], label=label, color=color)
-
-deduped_legend()
+		Z0 = obs.extrapolate(nominal, x, t).numpy()
+		label, color = get_label(Z0[:, -1])
+		plt.plot(Z0[0], Z0[1], color=color)
 
 y_samples, x_samples = 3, 7
 
@@ -57,14 +59,11 @@ for perturbed in random.choices(samples, k=y_samples*x_samples):
 			x = torch.Tensor([[x0], [xdot0]])
 			Zn = obs.extrapolate(perturbed, x, t).numpy()
 			label, color = get_label(Zn[:, -1])
-			if label != 'Unstable':
-				ax.plot(Zn[0], Zn[1], label=label, color=color)
+			ax.plot(Zn[0], Zn[1], color=color)
 	c += 1
 	if c == x_samples:
 		c = 0
 		r += 1
-
-deduped_legend()
 
 plt.figure()
 plt.hist(posterior, density=True, bins=int(len(posterior)/4))
