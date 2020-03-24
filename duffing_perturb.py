@@ -49,7 +49,7 @@ method = 'baseline'
 
 beta = 5
 step = 1e-3
-n_samples = 200
+n_samples = 1000
 n_split = 20
 n_burn = 5
 
