@@ -48,7 +48,7 @@ method = 'baseline'
 # method = 'constrained_kernel'
 
 beta = 5
-step = 1e-3
+step = 1e-6
 n_samples = 1000
 n_split = 100
 n_burn = 0
