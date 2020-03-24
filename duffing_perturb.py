@@ -49,8 +49,8 @@ method = 'baseline'
 
 beta = 5
 step = 1e-4
-n_samples = 1000
-n_split = 100
+n_samples = 2000
+n_split = 200
 n_burn = 0
 
 if method == 'baseline':
