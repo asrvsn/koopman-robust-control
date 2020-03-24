@@ -4,7 +4,7 @@ import numpy as np
 
 from sampler.utils import *
 
-method = 'baseline'
+method = 'constrained_kernel'
 results = hkl.load(f'saved/2x2_{method}.hkl')
 
 n_show = 3

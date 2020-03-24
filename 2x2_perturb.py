@@ -33,7 +33,6 @@ for i, (name, A) in enumerate(semistable_systems.items()):
 		T = 80
 		samples, posterior = perturb(n_samples, nominal, beta, boundary=reflections.nil_boundary, n_split=n_split, hmc_step=step, kernel_T=T)
 	elif method == 'constrained_kernel':
-		# print(name, spectral_radius(nominal).item())
 		r_div=(1e-2, 1e-2)
 		r_step = 3e-5
 		T = 80
@@ -42,9 +41,12 @@ for i, (name, A) in enumerate(semistable_systems.items()):
 	samples = [transferop_to_diff(s.numpy()) for s in samples]
 
 	results[name] = {
+		'method': method,
 		'nominal': A,
 		'posterior': posterior,
 		'samples': samples,
+		'step': step,
+		'beta': beta,
 	}
 
 print('Saving..')

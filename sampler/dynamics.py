@@ -38,23 +38,24 @@ def perturb(
 	dev = model.device
 	n_split = min(max_samples, n_split)
 
-	# Initialize sample bounds
+	# If no boundary provided, default to spectral radius bound
 	if boundary is None:
 		rad = spectral_radius(model).item()
 		r_max, r_min = rad + r_div[0], rad - r_div[1]
 		boundary = reflections.fn_boundary(spectral_radius, vmin=r_min, vmax=r_max)
 
-	# Initialize operator kernel
+	# If no distance provided, default to subspace kernel
 	if dist_func is None:
 		assert len(model.shape) == 2 and model.shape[0] == model.shape[1], "Subspace kernel valid for square matrices only"
 		K = PFKernel(dev, model.shape[0], kernel_m, kernel_T)
 		dist_func = lambda x, y: K(x, y, normalize=True) 
 
-	# Sample initial conditions uniformly from constraint set 
+	# If no constraints, the nominal will be used as initial condition
 	if boundary == reflections.nil_boundary:
 		print('Using nominal as initial conditions.')
-		ics = [(torch.zeros_like(model, device=dev),) for _ in range(n_split)]
+		ics = [(model.clone(),) for _ in range(n_split)]
 		
+	# If constraints provided, sample initial conditions uniformly from them 
 	else:
 		print('Generating initial conditions...')
 		potential = lambda _: 0 # Uniform 
@@ -62,12 +63,11 @@ def perturb(
 		if debug:
 			print('IC acceptance ratio:', ratio)
 
-	# Combine parallel HMC samples across initial conditions
+	# Run parallel HMC on initial conditions
 	print('Sampling models...')
 	pdf = torch.distributions.beta.Beta(torch.Tensor([alpha]).to(dev), torch.Tensor([beta]).to(dev))
 	def potential(params: tuple):
 		d_k = dist_func(model, params[0]).clamp(1e-8)
-		# print(d_k.item())
 		return -pdf.log_prob(d_k)
 
 	n_subsamples = int(max_samples / n_split)

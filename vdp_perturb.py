@@ -1,6 +1,7 @@
 import torch
 import hickle as hkl
 
+import sampler.reflections as reflections
 from sampler.features import *
 from sampler.kernel import *
 from sampler.operators import *
@@ -32,25 +33,30 @@ nominal = nominal.to(device)
 assert not torch.isnan(nominal).any().item()
 
 # Sample dynamics
-baseline = False
 
-if baseline:
-	dist_func = euclidean_matrix_kernel
-else:
-	d, m, T = PsiX.shape[0], 2, 80
-	K = PFKernel(device, d, m, T)
-	dist_func = lambda x, y: K(x, y, normalize=True) 
+method = 'baseline'
+# method = 'kernel'
+# method = 'constrained_kernel'
 
 beta = 5
-step=1e-4
+step = 1e-5
 n_samples = 200
 n_split = 20
-burn = 5
+n_burn = 5
 
-samples = perturb(n_samples, nominal, beta, dist_func=dist_func, r_div=(1e-2, 1e-2), r_step=3e-5, n_split=n_split, hmc_step=step, hmc_burn=burn)
-posterior = [dist_func(nominal, s).item() for s in samples]
+if method == 'baseline':
+	samples, posterior = perturb(n_samples, nominal, beta, dist_func=euclidean_matrix_kernel, boundary=reflections.nil_boundary, n_split=n_split, hmc_step=step, hmc_burn=n_burn)
+elif method == 'kernel':
+	T = 40
+	samples, posterior = perturb(n_samples, nominal, beta, boundary=reflections.nil_boundary, n_split=n_split, hmc_step=step, kernel_T=T, hmc_burn=n_burn)
+elif method == 'constrained_kernel':
+	r_div=(1e-2, 1e-2)
+	r_step = 3e-5
+	T = 40
+	samples, posterior = perturb(n_samples, nominal, beta, r_div=r_div, r_step=r_step, n_split=n_split, hmc_step=step, kernel_T=T, hmc_burn=n_burn)
 
 results = {
+	'method': method,
 	'nominal': nominal.numpy(),
 	'posterior': posterior,
 	'samples': [s.numpy() for s in samples],
@@ -58,4 +64,4 @@ results = {
 	'beta': beta,
 }
 print('Saving..')
-hkl.dump(results, f'saved/vdp{"_baseline" if baseline else ""}.hkl')
+hkl.dump(results, f'saved/vdp_{method}.hkl')
