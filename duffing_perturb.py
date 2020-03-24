@@ -53,7 +53,7 @@ leapfrog = 200
 n_samples = 2000
 n_split = 200
 n_burn = 0
-ic_step = 3e-5
+ic_step = 1e-5
 
 if method == 'baseline':
 	samples, posterior = perturb(n_samples, nominal, beta, dist_func=euclidean_matrix_kernel, boundary=reflections.nil_boundary, n_split=n_split, hmc_step=step, hmc_leapfrog=leapfrog, ic_step=ic_step, hmc_burn=n_burn)
