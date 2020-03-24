@@ -50,11 +50,11 @@ method = 'baseline'
 beta = 5
 step = 1e-3
 n_samples = 1000
-n_split = 20
-n_burn = 5
+n_split = 100
+n_burn = 0
 
 if method == 'baseline':
-	samples, posterior = perturb(n_samples, nominal, beta, dist_func=euclidean_matrix_kernel, boundary=reflections.nil_boundary, n_split=n_split, hmc_step=step, hmc_burn=n_burn)
+	samples, posterior = perturb(n_samples, nominal, beta, dist_func=euclidean_matrix_kernel, boundary=reflections.nil_boundary, n_split=n_split, hmc_step=step, ic_step=3e-5, hmc_burn=n_burn)
 elif method == 'kernel':
 	T = 40
 	samples, posterior = perturb(n_samples, nominal, beta, boundary=reflections.nil_boundary, n_split=n_split, hmc_step=step, kernel_T=T, hmc_burn=n_burn)

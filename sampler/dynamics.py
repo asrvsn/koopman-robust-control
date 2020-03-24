@@ -15,7 +15,7 @@ from sampler.utils import *
 def perturb(
 		max_samples: int, model: torch.Tensor, beta: float,
 		n_split=20, dist_func=None, boundary=None,
-		r_div=(1e-2, 1e-2), r_step=1e-5, r_leapfrog=100, alpha=1., 
+		r_div=(1e-2, 1e-2), ic_step=1e-5, r_leapfrog=100, alpha=1., 
 		hmc_step=1e-6, hmc_leapfrog=100, hmc_burn=0, 
 		hmc_random_step=False, hmc_deterministic=True, debug=False, 
 		kernel_m=2, kernel_T=80
@@ -53,7 +53,7 @@ def perturb(
 	# Sample initial conditions uniformly from constraints 
 	print('Generating initial conditions...')
 	potential = lambda _: 0 # Uniform 
-	ics, ratio = hmc.sample(n_split, (model,), potential, boundary, step_size=r_step, n_leapfrog=r_leapfrog, n_burn=0, random_step=False, return_first=True, debug=debug)
+	ics, ratio = hmc.sample(n_split, (model,), potential, boundary, step_size=ic_step, n_leapfrog=r_leapfrog, n_burn=0, random_step=False, return_first=True, debug=debug)
 	if debug:
 		print('IC acceptance ratio:', ratio)
 
