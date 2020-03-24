@@ -2,15 +2,21 @@ import torch
 from sampler.utils import is_semistable
 
 class PFKernel:
-	def __init__(self, device: torch.device, d: int, m: int, T: int):
+	def __init__(self, device: torch.device, d: int, m: int, T: int, L=0):
 		'''
 		TODOs: 
 		* allocate less memory
 		* possibly use torch.cartesian_product instead of repeat & meshgrid
+
+		d: input dimension
+		m: see paper
+		T: see paper
+		L: discounting factor
 		'''
 		self.device = device
 		self.d = d
 		self.T = T
+		self.L = L
 		with torch.no_grad():
 			index = torch.arange(d, device=device).expand(m, -1)
 			product = torch.meshgrid(index.unbind())
@@ -30,9 +36,9 @@ class PFKernel:
 		else:
 			sum_powers = torch.eye(self.d, device=self.device)
 			power = torch.eye(self.d, device=self.device)
-			for _ in range(1, self.T):
+			for t in range(self.T-1):
 				power = torch.mm(torch.mm(P1, power), P2.t())
-				sum_powers += power
+				sum_powers += power * torch.exp(-self.L*t)
 			submatrices = torch.gather(sum_powers[self.subindex_row], 2, self.subindex_col) 
 			result = submatrices.det().sum()
 			return result

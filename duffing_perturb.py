@@ -20,7 +20,7 @@ obs = PolynomialObservable(p, d, k)
 
 # Init data 
 t_max = 400
-n_per = 16000
+n_per = 8000
 n_init = 12
 x0s = np.linspace(-2.0, 2.0, n_init)
 xdot0s = np.linspace(-2.0, 2.0, n_init)
@@ -58,12 +58,12 @@ ic_step = 1e-5
 if method == 'baseline':
 	samples, posterior = perturb(n_samples, nominal, beta, dist_func=euclidean_matrix_kernel, boundary=reflections.nil_boundary, n_split=n_split, hmc_step=step, hmc_leapfrog=leapfrog, ic_step=ic_step, hmc_burn=n_burn)
 elif method == 'kernel':
-	T = 40
+	T = 80
 	samples, posterior = perturb(n_samples, nominal, beta, boundary=reflections.nil_boundary, n_split=n_split, hmc_step=step, hmc_leapfrog=leapfrog, ic_step=ic_step, kernel_T=T, hmc_burn=n_burn)
 elif method == 'constrained_kernel':
 	r_div=(1e-2, 1e-2)
 	r_step = 3e-5
-	T = 40
+	T = 80
 	samples, posterior = perturb(n_samples, nominal, beta, r_div=r_div, r_step=r_step, n_split=n_split, hmc_step=step, hmc_leapfrog=leapfrog, ic_step=ic_step, kernel_T=T, hmc_burn=n_burn)
 
 results = {
