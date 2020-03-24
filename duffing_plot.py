@@ -8,7 +8,7 @@ from sampler.utils import *
 from sampler.features import *
 
 # Initial conditions
-n_init = 11
+n_init = 5
 x0s = np.linspace(-2.0, 2.0, n_init)
 xdot0s = np.linspace(-2.0, 2.0, n_init)
 
@@ -17,7 +17,8 @@ p, d, k = 5, 2, 15
 obs = PolynomialObservable(p, d, k)
 
 # Plot
-results = hkl.load('saved/duffing_baseline.hkl')
+method = 'constrained_kernel'
+results = hkl.load(f'saved/duffing_{method}.hkl')
 nominal = torch.from_numpy(results['nominal']).float()
 posterior = results['posterior']
 samples = [torch.from_numpy(s).float() for s in results['samples']]
@@ -36,7 +37,7 @@ plt.figure()
 xbound, ybound = 2.2, 2.2
 plt.xlim(left=-xbound, right=xbound)
 plt.ylim(bottom=-ybound, top=ybound)
-plt.title('Nominal extrapolation of the Duffing Oscillator')
+plt.title('Nominal Duffing oscillator')
 for x0 in x0s:
 	for xdot0 in xdot0s:
 		x = torch.Tensor([[x0], [xdot0]])
@@ -47,7 +48,7 @@ for x0 in x0s:
 y_samples, x_samples = 3, 7
 
 fig, axs = plt.subplots(y_samples, x_samples)
-fig.suptitle(f'Perturbed extrapolations of the Duffing oscillator')
+fig.suptitle(f'Perturbations of Duffing oscillator ({method})')
 r, c = 0, 0
 for perturbed in random.choices(samples, k=y_samples*x_samples):
 	ax = axs[r, c]
