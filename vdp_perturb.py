@@ -34,9 +34,9 @@ assert not torch.isnan(nominal).any().item()
 
 # Sample dynamics
 
-method = 'baseline'
+# method = 'baseline'
 # method = 'kernel'
-# method = 'constrained_kernel'
+method = 'constrained_kernel'
 
 beta = 5
 step = 1e-5
