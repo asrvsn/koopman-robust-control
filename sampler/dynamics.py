@@ -50,18 +50,12 @@ def perturb(
 		K = PFKernel(dev, model.shape[0], kernel_m, kernel_T)
 		dist_func = lambda x, y: K(x, y, normalize=True) 
 
-	# If no constraints, the nominal will be used as initial condition
-	if boundary == reflections.nil_boundary:
-		print('Using nominal as initial conditions.')
-		ics = [(model.clone(),) for _ in range(n_split)]
-		
-	# If constraints provided, sample initial conditions uniformly from them 
-	else:
-		print('Generating initial conditions...')
-		potential = lambda _: 0 # Uniform 
-		ics, ratio = hmc.sample(n_split, (model,), potential, boundary, step_size=r_step, n_leapfrog=r_leapfrog, n_burn=0, random_step=False, return_first=True, debug=debug)
-		if debug:
-			print('IC acceptance ratio:', ratio)
+	# Sample initial conditions uniformly from constraints 
+	print('Generating initial conditions...')
+	potential = lambda _: 0 # Uniform 
+	ics, ratio = hmc.sample(n_split, (model,), potential, boundary, step_size=r_step, n_leapfrog=r_leapfrog, n_burn=0, random_step=False, return_first=True, debug=debug)
+	if debug:
+		print('IC acceptance ratio:', ratio)
 
 	# Run parallel HMC on initial conditions
 	print('Sampling models...')
