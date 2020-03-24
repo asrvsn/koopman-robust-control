@@ -43,9 +43,9 @@ assert not torch.isnan(nominal).any().item()
 
 # Sample dynamics
 
-method = 'baseline'
+# method = 'baseline'
 # method = 'kernel'
-# method = 'constrained_kernel'
+method = 'constrained_kernel'
 
 beta = 5
 step = 5e-5
@@ -62,9 +62,9 @@ elif method == 'kernel':
 	samples, posterior = perturb(n_samples, nominal, beta, boundary=reflections.nil_boundary, n_split=n_split, hmc_step=step, hmc_leapfrog=leapfrog, ic_step=ic_step, kernel_T=T, hmc_burn=n_burn)
 elif method == 'constrained_kernel':
 	r_div=(1e-2, 1e-2)
-	r_step = 3e-5
+	ic_step = 1e-5
 	T = 40
-	samples, posterior = perturb(n_samples, nominal, beta, r_div=r_div, r_step=r_step, n_split=n_split, hmc_step=step, hmc_leapfrog=leapfrog, ic_step=ic_step, kernel_T=T, hmc_burn=n_burn)
+	samples, posterior = perturb(n_samples, nominal, beta, r_div=r_div, ic_step=ic_step, n_split=n_split, hmc_step=step, hmc_leapfrog=leapfrog, kernel_T=T, hmc_burn=n_burn)
 
 results = {
 	'method': method,
