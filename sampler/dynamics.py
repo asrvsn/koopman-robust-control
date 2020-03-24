@@ -51,11 +51,16 @@ def perturb(
 		dist_func = lambda x, y: K(x, y, normalize=True) 
 
 	# Sample initial conditions uniformly from constraint set 
-	print('Generating initial conditions...')
-	potential = lambda _: 0 # Uniform 
-	ics, ratio = hmc.sample(n_split, (model,), potential, boundary, step_size=r_step, n_leapfrog=r_leapfrog, n_burn=0, random_step=False, return_first=True, debug=debug)
-	if debug:
-		print('IC acceptance ratio:', ratio)
+	if boundary == reflections.nil_boundary:
+		print('Using nominal as initial conditions.')
+		ics = [(torch.zeros_like(model, device=dev),) for _ in range(n_split)]
+		
+	else:
+		print('Generating initial conditions...')
+		potential = lambda _: 0 # Uniform 
+		ics, ratio = hmc.sample(n_split, (model,), potential, boundary, step_size=r_step, n_leapfrog=r_leapfrog, n_burn=0, random_step=False, return_first=True, debug=debug)
+		if debug:
+			print('IC acceptance ratio:', ratio)
 
 	# Combine parallel HMC samples across initial conditions
 	print('Sampling models...')

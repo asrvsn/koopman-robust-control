@@ -4,7 +4,8 @@ import numpy as np
 
 from sampler.utils import *
 
-results = hkl.load('saved/2x2.hkl')
+method = 'baseline'
+results = hkl.load(f'saved/2x2_{method}.hkl')
 
 n_show = 3
 fig, axs = plt.subplots(4 + n_show, len(results))
@@ -41,6 +42,6 @@ for i, (name, data) in enumerate(results.items()):
 	axs[-1,i].scatter(radii, np.zeros(len(radii)), marker='+', color='blue')
 	axs[-1,i].scatter([radius], [0], marker='+', color='orange')
 
-fig.suptitle('Perturbations of 2x2 LTI semistable_systems')
+fig.suptitle(f'Perturbations of 2x2 LTI semistable_systems ({method})')
 # fig.tight_layout(pad=0.01)
 plt.show()
