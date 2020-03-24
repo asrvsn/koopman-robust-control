@@ -48,7 +48,7 @@ method = 'baseline'
 # method = 'constrained_kernel'
 
 beta = 5
-step = 3e-4
+step = 1e-4
 leapfrog = 200
 n_samples = 2000
 n_split = 200
