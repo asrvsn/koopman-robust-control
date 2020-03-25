@@ -17,32 +17,29 @@ device = 'cuda' if torch.cuda.is_available() else 'cpu'
 method = 'constrained_kernel'
 # method = 'discounted_kernel'
 
-n_show = 3
+beta = 5
+step = 1e-4
+leapfrog = 100
 n_samples = 1000
 n_split = 50
-beta = 5
-results = {}
-step = 1e-4
 ic_step = 3e-5
+T = 80
+L = 0.1
+
+results = {}
 
 for i, (name, A) in enumerate(semistable_systems.items()):
 
 	nominal = torch.from_numpy(diff_to_transferop(A)).float()
 	
 	if method == 'baseline':
-		samples, posterior = perturb(n_samples, nominal, beta, dist_func=euclidean_matrix_kernel, n_split=n_split, hmc_step=step, ic_step=step)
+		samples, posterior = perturb(n_samples, nominal, beta, method='euclidean', n_split=n_split, hmc_step=step, ic_step=ic_step)
 	elif method == 'kernel':
-		T = 80
-		samples, posterior = perturb(n_samples, nominal, beta, n_split=n_split, hmc_step=step, kernel_T=T)
+		samples, posterior = perturb(n_samples, nominal, beta, method='kernel', n_split=n_split, hmc_step=step, ic_step=ic_step, kernel_T=T)
 	elif method == 'constrained_kernel':
-		r = spectral_radius(nominal).item()
-		boundary = reflections.fn_boundary(spectral_radius, vmin=r-1e-2, vmax=r+1e-2)
-		T = 80
-		samples, posterior = perturb(n_samples, nominal, beta, n_split=n_split, hmc_step=step, ic_step=ic_step, kernel_T=T)
+		samples, posterior = perturb(n_samples, nominal, beta, method='kernel', n_split=n_split, hmc_step=step, ic_step=ic_step, kernel_T=T, use_spectral_constraint=True)
 	elif method == 'discounted_kernel':
-		L = 0.1
-		T = 80
-		samples, posterior = perturb(n_samples, nominal, beta, n_split=n_split, hmc_step=step, ic_step=ic_step, kernel_T=T, kernel_L=L)
+		samples, posterior = perturb(n_samples, nominal, beta, method='kernel', n_split=n_split, hmc_step=step, ic_step=ic_step, kernel_T=T, kernel_L=L)
 
 	samples = [transferop_to_diff(s.numpy()) for s in samples]
 

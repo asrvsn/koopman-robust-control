@@ -55,22 +55,17 @@ leapfrog = 200
 n_samples = 2000
 n_split = 200
 ic_step = 1e-5
+T = 80
+L = 0.1
 
 if method == 'baseline':
-	samples, posterior = perturb(n_samples, nominal, beta, dist_func=euclidean_matrix_kernel, boundary=reflections.nil_boundary, n_split=n_split, hmc_step=step, hmc_leapfrog=leapfrog, ic_step=ic_step)
+	samples, posterior = perturb(n_samples, nominal, beta, method='euclidean', n_split=n_split, hmc_step=step, hmc_leapfrog=leapfrog, ic_step=ic_step)
 elif method == 'kernel':
-	T = 80
-	samples, posterior = perturb(n_samples, nominal, beta, boundary=reflections.nil_boundary, n_split=n_split, hmc_step=step, hmc_leapfrog=leapfrog, ic_step=ic_step, kernel_T=T)
+	samples, posterior = perturb(n_samples, nominal, beta, method='kernel', n_split=n_split, hmc_step=step, hmc_leapfrog=leapfrog, ic_step=ic_step, kernel_T=T)
 elif method == 'constrained_kernel':
-	r = spectral_radius(nominal).item()
-	boundary = reflections.fn_boundary(spectral_radius, vmin=r-1e-2, vmax=r+1e-2)
-	r_div=(1e-2, 1e-2)
-	T = 40
-	samples, posterior = perturb(n_samples, nominal, beta, ic_step=ic_step, n_split=n_split, hmc_step=step, hmc_leapfrog=leapfrog, kernel_T=T)
+	samples, posterior = perturb(n_samples, nominal, beta, method='kernel', n_split=n_split, hmc_step=step, hmc_leapfrog=leapfrog, ic_step=ic_step, kernel_T=T, use_spectral_constraint=True)
 elif method == 'discounted_kernel':
-	L = 0.1
-	T = 80
-	samples, posterior = perturb(n_samples, nominal, beta, n_split=n_split, hmc_step=step, ic_step=ic_step, hmc_leapfrog=leapfrog, kernel_T=T, kernel_L=L)
+	samples, posterior = perturb(n_samples, nominal, beta, method='kernel', n_split=n_split, hmc_step=step, hmc_leapfrog=leapfrog, ic_step=ic_step, kernel_T=T, kernel_L=L)
 
 n_trajectories = 12
 n_ics = 12

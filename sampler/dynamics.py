@@ -14,36 +14,36 @@ from sampler.utils import *
 
 def perturb(
 		max_samples: int, model: torch.Tensor, beta: float,
-		n_split=20, dist_func=None, boundary=reflections.nil_boundary,
-		ic_step=1e-5, ic_leapfrog=100, alpha=1., 
-		hmc_step=1e-6, hmc_leapfrog=100, hmc_burn=0, 
-		hmc_random_step=False, hmc_deterministic=True, debug=False, 
-		kernel_m=2, kernel_T=80, kernel_L=0,
+		# Kernel parameters
+		method='kernel', kernel_m=2, kernel_T=80, kernel_L=0, use_spectral_constraint=False,
+		# Initial condition settings
+		n_ics=20, ic_step=1e-5, ic_leapfrog=100, 
+		# HMC settings
+		hmc_step=1e-5, hmc_leapfrog=100, hmc_burn=0, hmc_random_step=False, hmc_deterministic=True, 
+		# Other settings
+		debug=False, alpha=1., 
 	):
 	'''
 	max_samples: number of samples returned <= this
 	model: nominal dynamics model
 	beta: distribution spread parameter (higher = smaller variance)
-
-	n_split: number of samples from constraint set for parallel HMC
-	dist_func: custom distance function between models (default: subspace kernel)
-	boundary: constraint set on samples (defaut: none)
-	alpha: leave at 1.
-	hmc_step: step size for HMC
-	hmc_burn: samples discarded during burn-in phase
-	hmc_deterministic: use seed for parallel HMC
-	kernel_m: subspace kernel m 
-	kernel_T: subspace kernel T
 	'''
 	dev = model.device
 	n_split = min(max_samples, n_split)
 
-	# If no distance provided, default to subspace kernel
-	if dist_func is None:
+	if method == 'euclidean':
+		dist_func = euclidean_matrix_kernel
+	elif method == 'kernel':
 		assert len(model.shape) == 2 and model.shape[0] == model.shape[1], "Subspace kernel valid for square matrices only"
 		K = PFKernel(dev, model.shape[0], kernel_m, kernel_T, L=kernel_L)
 		dist_func = lambda x, y: K(x, y, normalize=True) 
 
+	if use_spectral_constraint:
+		r = spectral_radius(nominal).item()
+		boundary = reflections.fn_boundary(spectral_radius, vmin=r-1e-2, vmax=r+1e-2)
+	else:
+		boundary = reflections.nil_boundary
+		
 	# Sample initial conditions uniformly from constraints 
 	print('Generating initial conditions...')
 	potential = lambda _: 0 # Uniform 
