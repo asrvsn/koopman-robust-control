@@ -47,12 +47,11 @@ def sample(
 			pbar.update(len(results))
 
 		with multiprocessing.Pool() as pool:
-			workers = []
 			for i, ic in enumerate(initial_conditions):
 				seed = 1000+i if deterministic else None
-				workers.append(pool.apply_async(worker, args=(
+				pool.apply_async(worker, args=(
 					n_samples, ic, step_size, n_leapfrog, n_burn, random_step, debug, return_first, seed
-				), callback=add_samples))
+				), callback=add_samples)
 			pool.close()
 			pool.join()
 

@@ -29,11 +29,6 @@ for Pn in random.choices(samples, k=20):
 	Zn = obs.extrapolate(Pn, X, t)
 	axs[0].plot(Zn[0], Zn[1], color='grey', alpha=0.4)
 
-# for mu in [2.5, 3.5, 4.0]:
-#   X, _ = vdp.dataset(mu, n=n_vdp, b=b_vdp, skip=skip_vdp) # start on limit cycle
-#   X = X[:t]
-#   plt.plot(X[0], X[1], color='green', alpha=0.5, label='Analytic perturbation')
-
 Z0 = obs.extrapolate(nominal.cpu(), X, t)
 axs[0].plot(Z0[0], Z0[1], color='blue')
 axs[0].plot([X[0][0]], [X[1][0]], marker='o', color='blue')

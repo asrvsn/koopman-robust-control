@@ -4,6 +4,9 @@ Algorithms for computing dynamical systems operators.
 import torch
 import numpy as np
 import matplotlib.pyplot as plt
+import multiprocessing
+from functools import partial
+from tqdm import tqdm
 
 from sampler.features import *
 from sampler.utils import *
@@ -25,6 +28,40 @@ def kdmd(X: torch.Tensor, Y: torch.Tensor, k: Kernel, epsilon=0, operator='K'):
 		G_XY = G_XY.t()
 	P = torch.mm(torch.pinverse(G_XX + epsilon*torch.eye(n, device=device)), G_XY)
 	return P
+
+def sample_2d_dynamics(
+		x_range: tuple, y_range: tuple, n_x: int, n_y: int, 
+		P: torch.Tensor, obs: Observable, t: int
+	):
+	'''
+	Sample trajectories from Koopman operator for 2d system.
+	'''
+	assert x_range[0] < x_range[1]
+	assert y_range[0] < y_range[1]
+	trajectories = {}
+
+	def worker(x0, y0, P, obs):
+		init = torch.Tensor([[x0], [y0]])
+		Z = obs.extrapolate(P, init, t)
+		return x0, y0, Z.numpy()
+
+	with tqdm(total=n_x*n_y, desc='Trajectories') as pbar:
+		def finish(result):
+			(x0, y0, Z) = result
+			trajectories[(x0, y0)] = Z
+			pbar.update(1)
+
+		# https://github.com/pytorch/pytorch/issues/973
+		# torch.multiprocessing.set_sharing_strategy('file_system')
+		with multiprocessing.Pool() as pool:
+			for x0 in np.linspace(x_range[0], x_range[1], n_x):
+				for y0 in np.linspace(y_range[0], y_range[1], n_y):
+					pool.apply_async(partial(worker), args=(x0, y0, P, obs), callback=finish)
+			pool.close()
+			pool.join()
+
+	return trajectories
+
 
 if __name__ == '__main__':
 	import systems.vdp as vdp

@@ -17,7 +17,7 @@ p, d, k = 5, 2, 15
 obs = PolynomialObservable(p, d, k)
 
 # Plot
-method = 'baseline'
+method = 'kernel'
 results = hkl.load(f'saved/duffing_{method}.hkl')
 nominal = torch.from_numpy(results['nominal']).float()
 posterior = results['posterior']
