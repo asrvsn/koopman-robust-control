@@ -1,5 +1,6 @@
 import torch
 import hickle as hkl
+import random
 
 import sampler.reflections as reflections
 from sampler.features import *
@@ -45,26 +46,36 @@ assert not torch.isnan(nominal).any().item()
 
 # method = 'baseline'
 # method = 'kernel'
-method = 'constrained_kernel'
+# method = 'constrained_kernel'
+method = 'discounted_kernel'
 
 beta = 5
 step = 5e-5
 leapfrog = 200
 n_samples = 2000
 n_split = 200
-n_burn = 0
 ic_step = 1e-5
 
 if method == 'baseline':
-	samples, posterior = perturb(n_samples, nominal, beta, dist_func=euclidean_matrix_kernel, boundary=reflections.nil_boundary, n_split=n_split, hmc_step=step, hmc_leapfrog=leapfrog, ic_step=ic_step, hmc_burn=n_burn)
+	samples, posterior = perturb(n_samples, nominal, beta, dist_func=euclidean_matrix_kernel, boundary=reflections.nil_boundary, n_split=n_split, hmc_step=step, hmc_leapfrog=leapfrog, ic_step=ic_step)
 elif method == 'kernel':
 	T = 80
-	samples, posterior = perturb(n_samples, nominal, beta, boundary=reflections.nil_boundary, n_split=n_split, hmc_step=step, hmc_leapfrog=leapfrog, ic_step=ic_step, kernel_T=T, hmc_burn=n_burn)
+	samples, posterior = perturb(n_samples, nominal, beta, boundary=reflections.nil_boundary, n_split=n_split, hmc_step=step, hmc_leapfrog=leapfrog, ic_step=ic_step, kernel_T=T)
 elif method == 'constrained_kernel':
+	r = spectral_radius(nominal).item()
+	boundary = reflections.fn_boundary(spectral_radius, vmin=r-1e-2, vmax=r+1e-2)
 	r_div=(1e-2, 1e-2)
-	ic_step = 1e-5
 	T = 40
-	samples, posterior = perturb(n_samples, nominal, beta, r_div=r_div, ic_step=ic_step, n_split=n_split, hmc_step=step, hmc_leapfrog=leapfrog, kernel_T=T, hmc_burn=n_burn)
+	samples, posterior = perturb(n_samples, nominal, beta, ic_step=ic_step, n_split=n_split, hmc_step=step, hmc_leapfrog=leapfrog, kernel_T=T)
+elif method == 'discounted_kernel':
+	L = 0.1
+	T = 80
+	samples, posterior = perturb(n_samples, nominal, beta, n_split=n_split, hmc_step=step, ic_step=ic_step, hmc_leapfrog=leapfrog, kernel_T=T, kernel_L=L)
+
+n_trajectories = 12
+n_ics = 12
+t = 800
+trajectories = [sample_2d_trajectories(P, obs, t, (-2,2), (-2,2), n_ics, n_ics) for P in random.choices(samples, k=n_trajectories)]
 
 results = {
 	'method': method,
@@ -73,6 +84,7 @@ results = {
 	'nominal': nominal.numpy(),
 	'posterior': posterior,
 	'samples': [s.numpy() for s in samples],
+	'trajectories': trajectories,
 }
 print('Saving..')
 hkl.dump(results, f'saved/duffing_{method}.hkl')
