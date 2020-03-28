@@ -28,14 +28,28 @@ class Observable:
 	def preimage(self, Y: torch.Tensor):
 		return Y
 
-	def extrapolate(self, P: torch.Tensor, X: torch.Tensor, t: int):
+	def extrapolate(self, P: torch.Tensor, X: torch.Tensor, t: int, B: None, u: None):
+		'''
+		P: transfer operator
+		X: initial conditions
+		t: trajectory length
+		B: (optional) control matrix
+		u: (optional) control inputs
+		'''
+		P, X = P.detach(), X.detach() # No differentiation
 		assert X.shape[0] == self.d, "dimension mismatch"
 		assert X.shape[1] >= self.m, "insufficient initial conditions provided"
+		if u is not None:
+			assert B is not None, "Control matrix required"
+			assert u.shape[1] >= t, "insufficient control inputs provided"
+			B, u = B.detach(), u.detach()
 		Y = torch.full((self.d, t), np.nan, device=X.device)
 		Y[:, 0:self.m] = X[:, 0:self.m]
 		for i in range(self.m, t):
 			x = Y[:, i-self.m:i]
-			z = torch.mm(P, self(x))
+			z = P@self(x)
+			if u is not None:
+				z += B@u[:, i]
 			y = self.preimage(z)
 			Y[:, i] = y.view(-1)
 		return Y
