@@ -2,7 +2,7 @@ import torch
 from sampler.utils import is_semistable
 
 class PFKernel:
-	def __init__(self, device: torch.device, d: int, m: int, T: int, L=0):
+	def __init__(self, device: torch.device, d: int, m: int, T: int, L=0.):
 		'''
 		TODOs: 
 		* allocate less memory
@@ -16,7 +16,7 @@ class PFKernel:
 		self.device = device
 		self.d = d
 		self.T = T
-		self.L = L
+		self.L = torch.exp(torch.Tensor([-L]))
 		with torch.no_grad():
 			index = torch.arange(d, device=device).expand(m, -1)
 			product = torch.meshgrid(index.unbind())
@@ -37,7 +37,7 @@ class PFKernel:
 			sum_powers = torch.eye(self.d, device=self.device)
 			power = torch.eye(self.d, device=self.device)
 			for t in range(self.T-1):
-				power = torch.mm(torch.mm(P1, power), P2.t()) * torch.exp(torch.Tensor([-self.L]))
+				power = P1@power@P2.t() * self.L
 				sum_powers += power 
 			submatrices = torch.gather(sum_powers[self.subindex_row], 2, self.subindex_col) 
 			result = submatrices.det().sum()
@@ -47,6 +47,8 @@ class PFKernel:
 Tests for P-F kernel
 '''
 if __name__ == '__main__':
+	from sampler.utils import *
+
 	device = 'cuda' if torch.cuda.is_available() else 'cpu'
 	torch.autograd.set_detect_anomaly(True)
 
@@ -72,3 +74,13 @@ if __name__ == '__main__':
 	print('Random operator is valid:', is_semistable(B))
 	print('Row-normalized operator is valid:', is_semistable(P))
 	print('Spectral-normalized operator is valid:', is_semistable(A / torch.norm(A, 2)))
+
+	print('Discounting')
+	import systems.lti2x2 as lti2x2
+	A = torch.from_numpy(diff_to_transferop(lti2x2.systems['spiral_source'])).float().requires_grad_()
+	print('spectral radius', spectral_radius(A).item())
+	d, m, T, L = 2, 2, 80, 2*torch.log(spectral_radius(A))
+	print('L:', L.item())
+	K = PFKernel(device, d, m, T, L=L)
+	x = K(A, A, normalize=True)
+	print('K(A, A) = ', x.item())

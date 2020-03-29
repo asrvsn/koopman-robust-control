@@ -24,7 +24,6 @@ n_samples = 1000
 n_ics = 50
 ic_step = 3e-5
 T = 80
-c = 0.3
 
 results = {}
 
@@ -44,7 +43,7 @@ for i, (name, A) in enumerate(systems.items()):
 	elif method == 'constrained_kernel':
 		samples, posterior = perturb(n_samples, nominal, beta, method='kernel', n_ics=n_ics, ic_step=ic_step, hmc_step=step, kernel_T=T, use_spectral_constraint=True)
 	elif method == 'discounted_kernel':
-		L = c*max(0, np.log(spectral_radius(nominal).item()))
+		L = max(0, 2*np.log(spectral_radius(nominal).item()))
 		samples, posterior = perturb(n_samples, nominal, beta, method='kernel', n_ics=n_ics, ic_step=ic_step, hmc_step=step, kernel_T=T, kernel_L=L)
 
 	samples = [transferop_to_diff(s.numpy()) for s in samples]
