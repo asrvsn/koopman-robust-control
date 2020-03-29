@@ -21,7 +21,7 @@ beta = 5
 step = 1e-4
 leapfrog = 100
 n_samples = 1000
-n_split = 50
+n_ics = 50
 ic_step = 3e-5
 T = 80
 L = 0.1
@@ -33,18 +33,18 @@ if method in ['kernel', 'constrained_kernel']:
 else:
 	systems = lti2x2.systems
 
-for i, (name, A) in enumerate(semistable_systems.items()):
+for i, (name, A) in enumerate(systems.items()):
 
 	nominal = torch.from_numpy(diff_to_transferop(A)).float()
 	
 	if method == 'baseline':
-		samples, posterior = perturb(n_samples, nominal, beta, method='euclidean', n_split=n_split, hmc_step=step, ic_step=ic_step)
+		samples, posterior = perturb(n_samples, nominal, beta, method='euclidean', n_ics=n_ics, ic_step=ic_step, hmc_step=step)
 	elif method == 'kernel':
-		samples, posterior = perturb(n_samples, nominal, beta, method='kernel', n_split=n_split, hmc_step=step, ic_step=ic_step, kernel_T=T)
+		samples, posterior = perturb(n_samples, nominal, beta, method='kernel', n_ics=n_ics, ic_step=ic_step, hmc_step=step, kernel_T=T)
 	elif method == 'constrained_kernel':
-		samples, posterior = perturb(n_samples, nominal, beta, method='kernel', n_split=n_split, hmc_step=step, ic_step=ic_step, kernel_T=T, use_spectral_constraint=True)
+		samples, posterior = perturb(n_samples, nominal, beta, method='kernel', n_ics=n_ics, ic_step=ic_step, hmc_step=step, kernel_T=T, use_spectral_constraint=True)
 	elif method == 'discounted_kernel':
-		samples, posterior = perturb(n_samples, nominal, beta, method='kernel', n_split=n_split, hmc_step=step, ic_step=ic_step, kernel_T=T, kernel_L=L)
+		samples, posterior = perturb(n_samples, nominal, beta, method='kernel', n_ics=n_ics, ic_step=ic_step, hmc_step=step, kernel_T=T, kernel_L=L)
 
 	samples = [transferop_to_diff(s.numpy()) for s in samples]
 
