@@ -28,7 +28,7 @@ class Observable:
 	def preimage(self, Y: torch.Tensor):
 		return Y
 
-	def extrapolate(self, P: torch.Tensor, X: torch.Tensor, t: int, B: None, u: None):
+	def extrapolate(self, P: torch.Tensor, X: torch.Tensor, t: int, B: None, u: None, unlift_every=True):
 		'''
 		P: transfer operator
 		X: initial conditions
@@ -43,16 +43,28 @@ class Observable:
 			assert B is not None, "Control matrix required"
 			assert u.shape[1] >= t, "insufficient control inputs provided"
 			B, u = B.detach(), u.detach()
-		Y = torch.full((self.d, t), np.nan, device=X.device)
-		Y[:, 0:self.m] = X[:, 0:self.m]
-		for i in range(self.m, t):
-			x = Y[:, i-self.m:i]
-			z = P@self(x)
-			if u is not None:
-				z += B@u[:, i]
-			y = self.preimage(z)
-			Y[:, i] = y.view(-1)
-		return Y
+
+		if unlift_every:
+			Y = torch.full((self.d, t), np.nan, device=X.device)
+			Y[:, 0:self.m] = X[:, 0:self.m]
+			for i in range(self.m, t):
+				x = Y[:, i-self.m:i]
+				z = P@self(x)
+				if u is not None:
+					z += B@u[:, i]
+				y = self.preimage(z)
+				Y[:, i] = y.view(-1)
+			return Y
+		# TODO: why would these have any difference?
+		else:
+			Z = torch.full((self.k, t), np.nan, device=X.device)
+			Z[:, 0:self.m] = self(X[:, 0:self.m])
+			for i in range(self.m, t):
+				z = P @ Z[:, i-1].unsqueeze(1)
+				if u is not None:
+					z += B@u[:, i]
+				Z[:, i] = z.view(-1)
+			return self.preimage(Z)
 
 class ComposedObservable(Observable):
 	def __init__(self, seq: list):
