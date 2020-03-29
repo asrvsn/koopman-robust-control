@@ -63,7 +63,7 @@ def perturb(
 	n_ret = len(samples)
 	samples = [s for (s,) in samples if not torch.isnan(s).any()]
 	if len(samples) < n_ret:
-		print(f'Warning: {n_ret - len(n_samples)} out of {n_ret} contain NaNs, not returned.')
+		print(f'Warning: {n_ret - len(samples)} out of {n_ret} contain NaNs, not returned.')
 	posterior = [dist_func(model, s).item() for s in samples]
 
 	return samples, posterior

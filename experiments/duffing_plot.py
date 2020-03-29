@@ -10,7 +10,7 @@ from sampler.operators import *
 
 set_seed(9001)
 
-method = 'kernel'
+method = 'baseline'
 results = hkl.load(f'saved/duffing_{method}.hkl')
 nominal = torch.from_numpy(results['nominal']).float()
 posterior = results['posterior']
@@ -18,7 +18,7 @@ samples = [torch.from_numpy(s).float() for s in results['samples']]
 # trajectories = results['trajectories']
 
 print('Saving trajectories...')
-n_perturbed = 12
+n_perturbed = 21
 n_ics = 14
 t = 800
 p, d, k = 5, 2, 15
@@ -52,6 +52,8 @@ hkl.dump(results, f'saved/duffing_{method}.hkl')
 # 	if c == x_samples:
 # 		c = 0
 # 		r += 1
+# 		if r == y_samples: 
+# 			break
 
 # plt.figure()
 # plt.hist(posterior, density=True, bins=int(len(posterior)/4))
