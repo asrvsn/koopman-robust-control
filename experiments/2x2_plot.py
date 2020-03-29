@@ -4,11 +4,12 @@ import numpy as np
 
 from sampler.utils import *
 
-method = 'constrained_kernel'
+method = 'baseline'
 results = hkl.load(f'saved/2x2_{method}.hkl')
 
-n_show = 3
-fig, axs = plt.subplots(4 + n_show, len(results))
+n_show = 0
+y_plots, x_plots = 4 + n_show, len(results)
+fig, axs = plt.subplots(y_plots, x_plots)
 
 for i, (name, data) in enumerate(results.items()):
 
@@ -18,12 +19,12 @@ for i, (name, data) in enumerate(results.items()):
 
 	# Original phase portrait
 	plot_flow_field(axs[0,i], lambda x: A@x, (-4,4), (-4,4))
-	axs[0,i].set_title(f'{name} - nominal')
+	axs[0,i].set_title(name)
 
 	# Perturbed phase portraits
-	axs[1,i].set_title('Perturbed')
-	for j, S in enumerate(random.choices(samples, k=n_show)):
-		plot_flow_field(axs[j+1,i], lambda x: S@x, (-4,4), (-4,4))
+	# axs[1,i].set_title('Perturbed')
+	# for j, S in enumerate(random.choices(samples, k=n_show)):
+	# 	plot_flow_field(axs[j+1,i], lambda x: S@x, (-4,4), (-4,4))
 
 	# Posterior distribution
 	axs[-3,i].hist(posterior, density=True, bins=max(1, int(len(posterior)/4))) 
@@ -42,6 +43,11 @@ for i, (name, data) in enumerate(results.items()):
 	axs[-1,i].scatter(radii, np.zeros(len(radii)), marker='+', color='blue')
 	axs[-1,i].scatter([radius], [0], marker='+', color='orange')
 
-fig.suptitle(f'Perturbations of 2x2 LTI semistable_systems ({method})')
+axs[0,0].set_ylabel('phase portrait')
+axs[1,0].set_ylabel('posterior')
+axs[2,0].set_ylabel('trace-determinant')
+axs[3,0].set_ylabel('spectral radii')
+
+# fig.suptitle(f'Perturbations of 2x2 LTI semistable_systems ({method})')
 # fig.tight_layout(pad=0.01)
 plt.show()
