@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import torch
 import random
+import scipy.stats as stats
 
 from sampler.utils import *
 from sampler.features import *
@@ -11,7 +12,9 @@ from sampler.operators import *
 set_seed(9001)
 
 method = 'baseline'
-results = hkl.load(f'saved/duffing_{method}.hkl')
+name = f'duffing_{method}'
+
+results = hkl.load(f'saved/{name}.hkl')
 nominal = torch.from_numpy(results['nominal']).float()
 posterior = results['posterior']
 samples = [torch.from_numpy(s).float() for s in results['samples']]
@@ -58,6 +61,12 @@ plt.tight_layout()
 
 plt.figure()
 plt.hist(posterior, density=True, bins=int(len(posterior)/4))
+
+if 'beta' in results:
+	xaxis = np.linspace(0, 1, 100)
+	yaxis = stats.beta.pdf(xaxis, 1., results['beta'])
+	plt.plot(xaxis, yaxis)
+
 plt.title('Posterior distribution')
 
 plt.show()
