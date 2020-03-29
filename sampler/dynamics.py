@@ -29,7 +29,7 @@ def perturb(
 	beta: distribution spread parameter (higher = smaller variance)
 	'''
 	dev = model.device
-	n_split = min(max_samples, n_split)
+	n_ics = min(max_samples, n_ics)
 
 	if method == 'euclidean':
 		dist_func = euclidean_matrix_kernel
@@ -47,7 +47,7 @@ def perturb(
 	# Sample initial conditions uniformly from constraints 
 	print('Generating initial conditions...')
 	potential = lambda _: 0 # Uniform 
-	ics, ratio = hmc.sample(n_split, (model,), potential, boundary, step_size=ic_step, n_leapfrog=ic_leapfrog, n_burn=0, random_step=False, return_first=True, debug=debug)
+	ics, ratio = hmc.sample(n_ics, (model,), potential, boundary, step_size=ic_step, n_leapfrog=ic_leapfrog, n_burn=0, random_step=False, return_first=True, debug=debug)
 	if debug:
 		print('IC acceptance ratio:', ratio)
 
@@ -58,7 +58,7 @@ def perturb(
 		d_k = dist_func(model, params[0]).clamp(1e-8)
 		return -pdf.log_prob(d_k)
 
-	n_subsamples = int(max_samples / n_split)
+	n_subsamples = int(max_samples / n_ics)
 	samples = hmc_parallel.sample(n_subsamples, ics, potential, boundary, step_size=hmc_step, n_leapfrog=hmc_leapfrog, n_burn=hmc_burn, random_step=hmc_random_step, return_first=True, debug=debug)
 	samples = [s for (s,) in samples]
 	posterior = [dist_func(model, s).item() for s in samples]

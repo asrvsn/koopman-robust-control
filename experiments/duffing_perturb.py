@@ -53,19 +53,19 @@ beta = 5
 step = 5e-5
 leapfrog = 200
 n_samples = 2000
-n_split = 200
+n_ics = 200
 ic_step = 1e-5
 T = 80
 L = 0.1
 
 if method == 'baseline':
-	samples, posterior = perturb(n_samples, nominal, beta, method='euclidean', n_split=n_split, hmc_step=step, hmc_leapfrog=leapfrog, ic_step=ic_step)
+	samples, posterior = perturb(n_samples, nominal, beta, method='euclidean', n_ics=n_ics, hmc_step=step, hmc_leapfrog=leapfrog, ic_step=ic_step)
 elif method == 'kernel':
-	samples, posterior = perturb(n_samples, nominal, beta, method='kernel', n_split=n_split, hmc_step=step, hmc_leapfrog=leapfrog, ic_step=ic_step, kernel_T=T)
+	samples, posterior = perturb(n_samples, nominal, beta, method='kernel', n_ics=n_ics, hmc_step=step, hmc_leapfrog=leapfrog, ic_step=ic_step, kernel_T=T)
 elif method == 'constrained_kernel':
-	samples, posterior = perturb(n_samples, nominal, beta, method='kernel', n_split=n_split, hmc_step=step, hmc_leapfrog=leapfrog, ic_step=ic_step, kernel_T=T, use_spectral_constraint=True)
+	samples, posterior = perturb(n_samples, nominal, beta, method='kernel', n_ics=n_ics, hmc_step=step, hmc_leapfrog=leapfrog, ic_step=ic_step, kernel_T=T, use_spectral_constraint=True)
 elif method == 'discounted_kernel':
-	samples, posterior = perturb(n_samples, nominal, beta, method='kernel', n_split=n_split, hmc_step=step, hmc_leapfrog=leapfrog, ic_step=ic_step, kernel_T=T, kernel_L=L)
+	samples, posterior = perturb(n_samples, nominal, beta, method='kernel', n_ics=n_ics, hmc_step=step, hmc_leapfrog=leapfrog, ic_step=ic_step, kernel_T=T, kernel_L=L)
 
 print('Saving trajectories...')
 n_trajectories = 12
