@@ -12,10 +12,10 @@ set_seed(9001)
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 # torch.autograd.set_detect_anomaly(True)
 
-method = 'baseline'
+# method = 'baseline'
 # method = 'kernel'
 # method = 'constrained_kernel'
-# method = 'discounted_kernel'
+method = 'discounted_kernel'
 
 beta = 5
 step = 1e-4
