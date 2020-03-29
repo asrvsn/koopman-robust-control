@@ -129,7 +129,7 @@ def plot_trace_determinant(ax, A, tr_range, det_range, n_grid=60):
 	ax.plot(axis, np.zeros(n_grid), color='black')
 	ax.plot(np.zeros(int(n_grid/2)), np.linspace(0,tr_range[1],int(n_grid/2)), color='black')
 	ax.plot(axis, (axis**2)/4, color='black')
-	ax.scatter([np.trace(A)], [np.linalg.det(A)], color='orange')
+	ax.scatter([np.trace(A)], [np.linalg.det(A)], color='orange', marker='+')
 	return ax
 
 def diff_to_transferop(A: np.ndarray):

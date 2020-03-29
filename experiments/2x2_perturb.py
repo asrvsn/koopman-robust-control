@@ -6,15 +6,15 @@ import sampler.reflections as reflections
 from sampler.utils import *
 from sampler.kernel import *
 from sampler.dynamics import *
-from systems.lti2x2 import semistable_systems
+import systems.lti2x2 as lti2x2
 
 set_seed(9001)
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 # torch.autograd.set_detect_anomaly(True)
 
-# method = 'baseline'
+method = 'baseline'
 # method = 'kernel'
-method = 'constrained_kernel'
+# method = 'constrained_kernel'
 # method = 'discounted_kernel'
 
 beta = 5
@@ -27,6 +27,11 @@ T = 80
 L = 0.1
 
 results = {}
+
+if method in ['kernel', 'constrained_kernel']:
+	systems = lti2x2.semistable_systems
+else:
+	systems = lti2x2.systems
 
 for i, (name, A) in enumerate(semistable_systems.items()):
 

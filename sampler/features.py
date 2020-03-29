@@ -54,13 +54,12 @@ class Observable:
 				z = P@self(x)
 				if u is not None:
 					z += B@u[:, i]
-				y = self.preimage(z)
-				Y[:, i] = y.view(-1)
+				Y[:, i] = self.preimage(z).view(-1)
 			return Y
 		# TODO: why would these have any difference?
 		else:
 			Z = torch.full((self.k, t), np.nan, device=X.device)
-			Z[:, 0:self.m] = self(X[:, 0:self.m])
+			Z[:, 0] = self(X[:, 0:self.m]).view(-1)
 			z = Z[:, self.m-1].unsqueeze(1)
 			for i in range(self.m, t):
 				z = P@z
@@ -70,6 +69,7 @@ class Observable:
 			return self.preimage(Z)
 
 class ComposedObservable(Observable):
+	''' Compose multiple observables (e.g. poly + delay) into a single one '''
 	def __init__(self, seq: list):
 		assert len(seq) > 0
 		self.seq = seq
