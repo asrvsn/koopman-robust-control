@@ -60,7 +60,10 @@ def perturb(
 
 	n_subsamples = int(max_samples / n_ics)
 	samples = hmc_parallel.sample(n_subsamples, ics, potential, boundary, step_size=hmc_step, n_leapfrog=hmc_leapfrog, n_burn=hmc_burn, random_step=hmc_random_step, return_first=True, debug=debug)
-	samples = [s for (s,) in samples]
+	n_ret = len(samples)
+	samples = [s for (s,) in samples if not torch.isnan(s).any()]
+	if len(samples) < n_ret:
+		print(f'Warning: {n_ret - len(n_samples)} out of {n_ret} contain NaNs, not returned.')
 	posterior = [dist_func(model, s).item() for s in samples]
 
 	return samples, posterior

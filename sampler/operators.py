@@ -5,6 +5,7 @@ import torch
 import numpy as np
 import matplotlib.pyplot as plt
 import multiprocessing
+import traceback
 from functools import partial
 from tqdm import tqdm
 
@@ -52,9 +53,12 @@ def kdmd(X: torch.Tensor, Y: torch.Tensor, k: Kernel, epsilon=0, operator='K'):
 	return P
 
 def worker(x0, y0, P, obs, t):
-	init = torch.Tensor([[x0], [y0]])
-	Z = obs.extrapolate(P, init, t)
-	return Z.numpy()
+	try:
+		init = torch.Tensor([[x0], [y0]])
+		Z = obs.extrapolate(P, init, t)
+		return Z.numpy()
+	except:
+		print(traceback.format_exc())
 
 def sample_2d_dynamics(
 		P: torch.Tensor, obs: Observable, t: int,

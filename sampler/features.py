@@ -28,7 +28,7 @@ class Observable:
 	def preimage(self, Y: torch.Tensor):
 		return Y
 
-	def extrapolate(self, P: torch.Tensor, X: torch.Tensor, t: int, B: None, u: None, unlift_every=True, build_graph=False):
+	def extrapolate(self, P: torch.Tensor, X: torch.Tensor, t: int, B=None, u=None, unlift_every=True, build_graph=False):
 		'''
 		P: transfer operator
 		X: initial conditions
