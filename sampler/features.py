@@ -59,8 +59,9 @@ class Observable:
 		else:
 			Z = torch.full((self.k, t), np.nan, device=X.device)
 			Z[:, 0:self.m] = self(X[:, 0:self.m])
+			z = Z[:, self.m-1].unsqueeze(1)
 			for i in range(self.m, t):
-				z = P @ Z[:, i-1].unsqueeze(1)
+				z = P@z
 				if u is not None:
 					z += B@u[:, i]
 				Z[:, i] = z.view(-1)

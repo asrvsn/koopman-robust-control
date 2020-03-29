@@ -11,7 +11,7 @@ import systems.duffing as duffing
 
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
-set_seed(1000)
+set_seed(9001)
 
 # Init features
 p, d, k = 5, 2, 15
@@ -50,49 +50,46 @@ Yp = obs.extrapolate(P, X, horizon, B=B, u=u_input, unlift_every=True) # Change 
 plt.plot(Yp[0], Yp[1], label='Predicted')
 plt.legend()
 
-# # MPC
-# def mpc_solve(P, B, obs, x_init, H=50):
-# 	d = x_init.value.shape[0]
-# 	d_u = B.shape[1]
-# 	x = cp.Parameter((d, H+1))
-# 	u = cp.Variable((d_u, H))
+# MPC
+def mpc_solve(P, B, obs, z0, H=50, umin=-1., umax=1.):
+	d_u = B.shape[1]
+	z = cp.Variable((obs.k, H+1))
+	u = cp.Variable((d_u, H))
+	umin = np.full((d_u,), umin)
+	umax = np.full((d_u,), umax)
 
-# 	Q = np.diag([1.0, 0.0])
-# 	R = np.diag([0.01])
+	diag = np.zeros(obs.k)
+	diag[0] = 1.
+	Q = np.diag(diag)
+	R = np.diag([0.01])
 
-# 	cost = 0.
-# 	constr = [x[:,0] == x_init]
-# 	for t in range(H):
-# 		cost += cp.quad_form(x[:, t+1], Q)
-# 		# cost += cp.quad_form(u[:, t], R)
+	cost = 0.
+	constr = [z[:,0] == z0]
+	for t in range(H):
+		cost += cp.quad_form(z[:, t], Q)
+		# cost += cp.quad_form(u[:, t], R)
 
-# 		z_t = [None for _ in range(obs.k)]
-# 		for i, key in enumerate(obs.psi.keys()):
-# 			z_t[i] = 1
-# 			for term, power in enumerate(key):
-# 				if power > 0:
-# 					z_t[i] *= x[term, t] ** power
-# 		z_t = cp.vstack(z_t)
+		z_pred = P@z[:, t] + B@u[:, t]
+		constr += [z[:, t+1][:obs.d] == z_pred[:obs.d]]
+		constr += [umin <= u[:, t], u[:, t] <= umax]
 
-# 		z_pred = P@z_t + B@(u[:, t][np.newaxis])
-# 		x_pred = z_pred[:obs.d]
-# 		constr += [x[:, t+1][:, np.newaxis] == x_pred]
+	prob = cp.Problem(cp.Minimize(cost), constr)
+	result = prob.solve(verbose=False)
+	if prob.status == cp.OPTIMAL:
+		print(result)
+		return z.value, u.value
+	else:
+		raise Exception('Problem could not be solved.')
 
-# 	prob = cp.Problem(cp.Minimize(cost), constr)
-# 	result = prob.solve(verbose=False)
-# 	if prob.status == cp.OPTIMAL:
-# 		print(result)
-# 		ox, ou = x.value[0,:], u.value[0,:]
-# 		return 
-# 	else:
-# 		raise Exception('Problem could not be solved.')
+z0 = cp.Parameter(obs.k)
+z0.value = obs(X[:,:3]).numpy()[:, 0]
+Z, u = mpc_solve(P.numpy(), B.numpy(), obs, z0)
+Xu = obs.preimage(Z) 
 
-# x_init = cp.Parameter(2)
-# x_init.value = np.array([-1., -1.])
-# ox, ou = mpc_solve(P.numpy(), B.numpy(), obs, x_init)
-
-# fig, axs = plt.subplots((1,2))
-# axs[0].plot(ox[0], ox[1])
-# axs[1].plot(ou)
+fig, axs = plt.subplots(1,2)
+axs[0].plot(Xu[0], Xu[1])
+axs[0].set_title('Phase space')
+axs[1].plot(u[0])
+axs[1].set_title('Control signal')
 
 plt.show()
