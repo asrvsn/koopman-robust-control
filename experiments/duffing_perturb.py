@@ -67,10 +67,11 @@ elif method == 'constrained_kernel':
 elif method == 'discounted_kernel':
 	samples, posterior = perturb(n_samples, nominal, beta, method='kernel', n_split=n_split, hmc_step=step, hmc_leapfrog=leapfrog, ic_step=ic_step, kernel_T=T, kernel_L=L)
 
+print('Saving trajectories...')
 n_trajectories = 12
 n_ics = 12
 t = 800
-trajectories = [sample_2d_trajectories(P, obs, t, (-2,2), (-2,2), n_ics, n_ics) for P in random.choices(samples, k=n_trajectories)]
+trajectories = [sample_2d_dynamics(P, obs, t, (-2,2), (-2,2), n_ics, n_ics) for P in random.choices(samples, k=n_trajectories)]
 
 results = {
 	'method': method,
