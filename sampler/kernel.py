@@ -38,7 +38,7 @@ class PFKernel:
 			power = torch.eye(self.d, device=self.device)
 			for t in range(self.T-1):
 				power = torch.mm(torch.mm(P1, power), P2.t())
-				sum_powers += power * torch.exp(-self.L*t)
+				sum_powers += power * torch.exp(torch.Tensor([-self.L*t]))
 			submatrices = torch.gather(sum_powers[self.subindex_row], 2, self.subindex_col) 
 			result = submatrices.det().sum()
 			return result
