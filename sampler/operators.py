@@ -21,7 +21,10 @@ def dmd(X: torch.Tensor, Y: torch.Tensor, operator='K'):
 
 def dmdc(sys: Callable, ics: list, u: torch.Tensor, obs: Observable):
 	'''
+	sys: system data generator (sys : ic, u -> X)
+	ics: initial conditions
 	u: N (simulations) x T (control inputs)
+	obs: observable
 	'''
 	V, W = [], []
 	for i in range(len(ics)):

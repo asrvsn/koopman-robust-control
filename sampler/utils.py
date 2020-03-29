@@ -7,10 +7,13 @@ import matplotlib.pyplot as plt
 import matplotlib
 import scipy.linalg as linalg
 
-def set_seed(seed: int):
+def set_seed(seed=None):
 	random.seed(seed)
 	np.random.seed(seed)
-	torch.manual_seed(seed)
+	if seed is None: 
+		torch.manual_seed(random.randint(1,1e6))
+	else:
+		torch.manual_seed(seed)
 
 def zip_with(X: tuple, Y: tuple, f: Callable):
 	return tuple(f(x,y) for (x,y) in zip(X, Y))
