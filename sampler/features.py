@@ -28,7 +28,7 @@ class Observable:
 	def preimage(self, Y: torch.Tensor):
 		return Y
 
-	def extrapolate(self, P: torch.Tensor, X: torch.Tensor, t: int, B: None, u: None, unlift_every=True):
+	def extrapolate(self, P: torch.Tensor, X: torch.Tensor, t: int, B: None, u: None, unlift_every=True, build_graph=False):
 		'''
 		P: transfer operator
 		X: initial conditions
@@ -36,13 +36,15 @@ class Observable:
 		B: (optional) control matrix
 		u: (optional) control inputs
 		'''
-		P, X = P.detach(), X.detach() # No differentiation
 		assert X.shape[0] == self.d, "dimension mismatch"
 		assert X.shape[1] >= self.m, "insufficient initial conditions provided"
+		if not build_graph:
+			P, X = P.detach(), X.detach() 
 		if u is not None:
 			assert B is not None, "Control matrix required"
 			assert u.shape[1] >= t, "insufficient control inputs provided"
-			B, u = B.detach(), u.detach()
+			if not build_graph:
+				B, u = B.detach(), u.detach()
 
 		if unlift_every:
 			Y = torch.full((self.d, t), np.nan, device=X.device)

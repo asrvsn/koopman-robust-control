@@ -70,7 +70,7 @@ def mpc_solve(P, B, obs, z0, H=50, umin=-1., umax=1.):
 		# cost += cp.quad_form(u[:, t], R)
 
 		z_pred = P@z[:, t] + B@u[:, t]
-		constr += [z[:, t+1][:obs.d] == z_pred[:obs.d]]
+		constr += [z[:obs.d, t+1] == z_pred[:obs.d]]
 		constr += [umin <= u[:, t], u[:, t] <= umax]
 
 	prob = cp.Problem(cp.Minimize(cost), constr)
