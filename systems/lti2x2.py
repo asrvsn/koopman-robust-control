@@ -14,7 +14,7 @@ systems = {
 	'saddle1': np.array([[0.70,-2.55],[-0.10, -2.50]]), 
 	'saddle2': np.array([[0.95,2.25],[0.20, -2.10]]), 
 	'saddle3': np.array([[-0.30,1.40],[0.55, 0.40]]), 
-	'defective_source': np.array([[0.1, 0.8], [-1.38, 2.2]]),
+	'defective_source': np.array([[0., 1.], [-1., 2.]]),
 	'defective_sink': np.array([[0.15, 1.8], [-0.87, -2.35]]),
 }
 

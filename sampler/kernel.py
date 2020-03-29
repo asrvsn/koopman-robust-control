@@ -16,7 +16,7 @@ class PFKernel:
 		self.device = device
 		self.d = d
 		self.T = T
-		self.L = torch.exp(torch.Tensor([-L]))
+		self.expL = torch.exp(torch.Tensor([-L]))
 		with torch.no_grad():
 			index = torch.arange(d, device=device).expand(m, -1)
 			product = torch.meshgrid(index.unbind())
@@ -37,7 +37,7 @@ class PFKernel:
 			sum_powers = torch.eye(self.d, device=self.device)
 			power = torch.eye(self.d, device=self.device)
 			for t in range(self.T-1):
-				power = P1@power@P2.t() * self.L
+				power = P1@power@P2.t() * self.expL
 				sum_powers += power 
 			submatrices = torch.gather(sum_powers[self.subindex_row], 2, self.subindex_col) 
 			result = submatrices.det().sum()
@@ -77,7 +77,7 @@ if __name__ == '__main__':
 
 	print('Discounting')
 	import systems.lti2x2 as lti2x2
-	A = torch.from_numpy(diff_to_transferop(lti2x2.systems['spiral_source'])).float().requires_grad_()
+	A = torch.from_numpy(diff_to_transferop(lti2x2.systems['defective_source'])).float().requires_grad_()
 	print('spectral radius', spectral_radius(A).item())
 	d, m, T, L = 2, 2, 80, 2*torch.log(spectral_radius(A))
 	print('L:', L.item())
