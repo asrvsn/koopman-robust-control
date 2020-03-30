@@ -47,15 +47,26 @@ class Observable:
 				B, u = B.detach(), u.detach()
 
 		if unlift_every:
-			Y = torch.full((self.d, t), np.nan, device=X.device)
-			Y[:, 0:self.m] = X[:, 0:self.m]
-			for i in range(self.m, t):
-				x = Y[:, i-self.m:i]
-				z = P@self(x)
-				if u is not None:
-					z += B@u[:, i]
-				Y[:, i] = self.preimage(z).view(-1)
-			return Y
+			if build_graph:
+				Y = [X[:,0]]
+				x_cur = X[:,0].unsqueeze(1)
+				for i in range(self.m, t):
+					z = P@self(x_cur, build_graph=True)
+					if u is not None:
+						z = z + B@u[:, i]
+					x_cur = self.preimage(z)
+					Y.append(x_cur.view(-1))
+				return torch.stack(Y, dim=1)
+			else:
+				Y = torch.full((self.d, t), np.nan, device=X.device)
+				Y[:, 0:self.m] = X[:, 0:self.m]
+				for i in range(self.m, t):
+					x = Y[:, i-self.m:i]
+					z = P@self(x)
+					if u is not None:
+						z += B@u[:, i]
+					Y[:, i] = self.preimage(z).view(-1)
+				return Y
 		# TODO: why would these have any difference?
 		else:
 			Z = torch.full((self.k, t), np.nan, device=X.device)
@@ -64,7 +75,7 @@ class Observable:
 			for i in range(self.m, t):
 				z = P@z
 				if u is not None:
-					z += B@u[:, i]
+					z = z + B@u[:, i]
 				Z[:, i] = z.view(-1)
 			return self.preimage(Z)
 
@@ -142,15 +153,24 @@ class PolynomialObservable(Observable):
 
 		super().__init__(d, k, 1)
 
-	def __call__(self, X: torch.Tensor):
-		Z = torch.empty((self.k, X.shape[1]), device=X.device)
-		for i, key in enumerate(self.psi.keys()):
-			z = torch.ones((X.shape[1],), device=X.device)
-			for term, power in enumerate(key):
-				if power > 0:
-					z *= torch.pow(X[term], power)
-			Z[i] = z
-		return Z
+	def __call__(self, X: torch.Tensor, build_graph=False):
+		if build_graph:
+			Z = []
+			for i, key in enumerate(self.psi.keys()):
+				z = torch.ones((X.shape[1],), device=X.device)
+				for term, power in enumerate(key):
+					if power > 0:
+						z = z * torch.pow(X[term], power)
+				Z.append(z)
+			return torch.stack(Z)
+		else:
+			Z = torch.empty((self.k, X.shape[1]), device=X.device)
+			for i, key in enumerate(self.psi.keys()):
+				Z[i] = torch.ones((X.shape[1],), device=X.device)
+				for term, power in enumerate(key):
+					if power > 0:
+						Z[i] *= torch.pow(X[term], power)
+			return Z
 
 	def preimage(self, Z: torch.Tensor): 
 		return Z[:self.d]
