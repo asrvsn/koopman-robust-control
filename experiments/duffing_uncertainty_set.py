@@ -30,7 +30,7 @@ leapfrog = 400
 n_samples = 2000
 n_ics = 20
 ic_step = 1e-5
-ic_leapfrog = 100
+ic_leapfrog = 50
 T = 80
 L = max(0, 2*np.log(spectral_radius(P).item()))
 
