@@ -17,18 +17,18 @@ device = 'cuda' if torch.cuda.is_available() else 'cpu'
 set_seed(9001)
 
 data = hkl.load('saved/duffing_controlled_nominal.hkl')
-P, B = torch.from_numpy(data['P']).float(), torch.from_numpy(data['B']).float()
+P = torch.from_numpy(data['P']).float()
 
 # Init features
 p, d, k = 5, 2, 15
 obs = PolynomialObservable(p, d, k)
 
 # Sample dynamics
-beta = 10
-step = 3e-5
+beta = 5
+step = 5e-5
 leapfrog = 200
-n_samples = 256
-n_ics = 32
+n_samples = 2000
+n_ics = 200
 ic_step = 1e-5
 T = 80
 

@@ -12,7 +12,8 @@ from sampler.operators import *
 set_seed(9001)
 
 method = 'baseline'
-name = f'duffing_{method}'
+# name = f'duffing_{method}'
+name = 'duffing_uncertainty_set'
 
 results = hkl.load(f'saved/{name}.hkl')
 nominal = torch.from_numpy(results['nominal']).float()

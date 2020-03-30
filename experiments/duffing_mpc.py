@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 from tqdm import tqdm
 import matplotlib
 from scipy.integrate import odeint
-matplotlib.use('tkagg')
+# matplotlib.use('tkagg')
 
 from sampler.features import *
 from sampler.operators import *
@@ -25,9 +25,10 @@ beta=1.0
 gamma=0.5
 delta=0.3
 
-def solve_mpc(t0: float, dt: float, x0: torch.Tensor, P: torch.Tensor, B: torch.Tensor, obs: Observable, cost: Callable, h: int, umin=-2., umax=2., eps=1e-5):
+def solve_mpc(t0: float, dt: float, x0: torch.Tensor, Ps: list, B: torch.Tensor, obs: Observable, cost: Callable, h: int, umin=-2., umax=2., eps=1e-5):
 	'''
 	h: horizon
+	Ps: list of models
 	'''
 	u = torch.full((1, h), 0).unsqueeze(2) 
 	u = torch.nn.Parameter(u)
@@ -37,9 +38,10 @@ def solve_mpc(t0: float, dt: float, x0: torch.Tensor, P: torch.Tensor, B: torch.
 	loss, prev_loss = torch.Tensor([float('inf')]), torch.Tensor([0.])
 
 	while torch.abs(loss - prev_loss).item() > eps:
-		x_pred = obs.extrapolate(P, x0.unsqueeze(1), h, B=B, u=u.clamp(umin, umax), build_graph=True, unlift_every=True)
 		prev_loss = loss
-		loss = cost(u, x_pred, window)
+		loss = torch.max(torch.stack([
+			cost(u, obs.extrapolate(P, x0.unsqueeze(1), h, B=B, u=u.clamp(umin, umax), build_graph=True, unlift_every=False), window) for P in Ps
+		]))
 		# print(loss.item())
 		opt.zero_grad()
 		loss.backward()
@@ -50,12 +52,12 @@ def solve_mpc(t0: float, dt: float, x0: torch.Tensor, P: torch.Tensor, B: torch.
 
 	return u.data
 
-def mpc_loop(x0, y0, P, B, obs, cost, h, dt, nmax, tapply=10):
+def mpc_loop(x0, y0, Ps, B, obs, cost, h, dt, nmax, tapply=1):
 	history_t = [0]
 	history_u = [0]
 	t = 0
 	for i in tqdm(range(nmax), desc='MPC'):
-		u_opt = solve_mpc(t, dt, torch.Tensor([x0, y0]), P, B, obs, cost, h)[0]
+		u_opt = solve_mpc(t, dt, torch.Tensor([x0, y0]), Ps, B, obs, cost, h)[0]
 		for j in range(tapply):
 			xdot, ydot = duffing.system((x0, y0), None, alpha, beta, gamma, delta, lambda _: u_opt[j][0])
 			x0 += dt*xdot
@@ -71,28 +73,33 @@ P, B = torch.from_numpy(data['P']).float(), torch.from_numpy(data['B']).float()
 dt = data['dt']
 print('Using dt:', dt)
 
-xR = lambda t: torch.full(t.shape, 0.)
-# xR = lambda t: torch.sign(torch.cos(t*0.7))
+# xR = lambda t: torch.full(t.shape, 0.)
+# xR = lambda t: torch.sign(torch.cos(t*2))
+xR = lambda t: torch.floor(t/5)/5
 cost = lambda u, x, t: ((x[0] - xR(t))**2).sum()
 h = 50
-x0, y0 = 1., 1.
+x0, y0 = .5, 0.
 
 # Re-simulate the system with controls 
-hist_t, hist_u = mpc_loop(x0, y0, P, B, obs, cost, h, dt, 100)
-controller = lambda t: hist_u[int(t/dt)-1]
+hist_t, hist_u = mpc_loop(x0, y0, [P], B, obs, cost, h, dt, 1000)
+def controller(t):
+	i = int(t/dt)-1
+	if i < len(hist_u):
+		return hist_u[i]
+	return 0
 hist_x = odeint(duffing.system, (x0, y0), hist_t, args=(alpha, beta, gamma, delta, controller)).T
 
-plt.figure()
-plt.plot(hist_t, hist_x[0], color='blue', label='plant')
-plt.plot(hist_t, xR(torch.Tensor(hist_t)), color='orange', label='reference')
+fig, axs = plt.subplots(1, 4)
+axs[0].plot(hist_t, hist_x[0], color='blue', label='x1')
+axs[0].plot(hist_t, xR(torch.Tensor(hist_t)), color='orange', label='reference')
+
+axs[1].plot(hist_t, hist_x[1])
+
+axs[2].plot(hist_x[0], hist_x[1])
+
+axs[3].plot(hist_t, hist_u)
+
 plt.legend()
-
-plt.figure()
-plt.plot(hist_x[0], hist_x[1])
-
-plt.figure()
-plt.plot(hist_t, hist_u)
-
 # hist = []
 # x, y = -1., -1.
 # for _ in range(1000):
