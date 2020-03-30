@@ -39,12 +39,12 @@ L = max(0, 2*np.log(spectral_radius(P).item()))
 samples, posterior = perturb(n_samples, P, beta, method='euclidean', hmc_burn=burn, n_ics=n_ics, ic_leapfrog=ic_leapfrog, hmc_step=step, hmc_leapfrog=leapfrog, ic_step=ic_step)
 
 
-# # Collect trajectories 
-# print('Saving trajectories...')
-# n_trajectories = 24
-# n_ics = 12
-# t = 800
-# trajectories = [sample_2d_dynamics(P, obs, t, (-2,2), (-2,2), n_ics, n_ics) for P in random.choices(samples, k=n_trajectories)]
+# Collect trajectories 
+print('Saving trajectories...')
+n_trajectories = 24
+n_ics = 12
+t = 800
+trajectories = [sample_2d_dynamics(P, obs, t, (-2,2), (-2,2), n_ics, n_ics) for P in random.choices(samples, k=n_trajectories)]
 
 results = {
 	'step': step,
@@ -54,7 +54,7 @@ results = {
 	'nominal': P.numpy(),
 	'posterior': posterior,
 	'samples': [s.numpy() for s in samples],
-# 	'trajectories': trajectories,
+ 	'trajectories': trajectories,
 }
 print('Saving..')
 hkl.dump(results, 'saved/duffing_uncertainty_set.hkl')
