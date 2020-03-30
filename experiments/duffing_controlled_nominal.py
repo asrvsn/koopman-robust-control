@@ -21,7 +21,7 @@ p, d, k = 5, 2, 15
 obs = PolynomialObservable(p, d, k)
 
 # Initial conditions
-t_max = 40
+t_max = 200
 n_data = 8000
 n_init = 14
 ics = []
@@ -54,6 +54,7 @@ results = {
 	'B': B.numpy(),
 	'gamma': gamma,
 	'trajectories': trajectories,
+	'dt': t_max / n_data,
 }
 print('Saving...')
 hkl.dump(results, 'saved/duffing_controlled_nominal.hkl')
