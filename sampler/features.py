@@ -53,7 +53,7 @@ class Observable:
 				for i in range(self.m, t):
 					z = P@self(x_cur, build_graph=True)
 					if u is not None:
-						z = z + B@u[:, i]
+						z = z + B@u[:, i-1]
 					x_cur = self.preimage(z)
 					Y.append(x_cur.view(-1))
 				return torch.stack(Y, dim=1)
@@ -64,7 +64,7 @@ class Observable:
 					x = Y[:, i-self.m:i]
 					z = P@self(x)
 					if u is not None:
-						z += B@u[:, i]
+						z += B@u[:, i-1]
 					Y[:, i] = self.preimage(z).view(-1)
 				return Y
 		# TODO: why would these have any difference?
@@ -75,7 +75,7 @@ class Observable:
 				for i in range(self.m, t):
 					z_cur = P@z_cur
 					if u is not None:
-						z_cur = z_cur + B@u[:, i]
+						z_cur = z_cur + B@u[:, i-1]
 					Z.append(z_cur.view(-1))
 				return self.preimage(torch.stack(Z, dim=1))
 			else:
@@ -85,7 +85,7 @@ class Observable:
 				for i in range(self.m, t):
 					z = P@z
 					if u is not None:
-						z += B@u[:, i]
+						z += B@u[:, i-1]
 					Z[:, i] = z.view(-1)
 				return self.preimage(Z)
 
