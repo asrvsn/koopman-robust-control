@@ -28,7 +28,7 @@ delta=0.3
 def solve_mpc(t0: float, dt: float, x0: torch.Tensor, Ps: list, B: torch.Tensor, obs: Observable, cost: Callable, h: int, umin=-2., umax=2., eps=1e-5):
 	'''
 	h: horizon
-	Ps: list of models
+	Ps: list of models (if > 1, this does robust MPC)
 	'''
 	u = torch.full((1, h), 0).unsqueeze(2) 
 	u = torch.nn.Parameter(u)
@@ -52,7 +52,7 @@ def solve_mpc(t0: float, dt: float, x0: torch.Tensor, Ps: list, B: torch.Tensor,
 
 	return u.data
 
-def mpc_loop(x0, y0, Ps, B, obs, cost, h, dt, nmax, tapply=3):
+def mpc_loop(x0, y0, Ps, B, obs, cost, h, dt, nmax, tapply=1):
 	history_t = [0]
 	history_u = [0]
 	history_x = [[x0, y0]]
@@ -80,21 +80,21 @@ dt = data['dt']
 print('Using dt:', dt)
 
 # xR = lambda t: torch.full(t.shape, 0.)
-xR = lambda t: torch.sign(torch.cos(t/2))
+xR = lambda t: torch.sign(torch.cos(t/4))
 # xR = lambda t: torch.floor(t/5)/5
 cost = lambda u, x, t: ((x[0] - xR(t))**2).sum()
 h = 50
 x0, y0 = .5, 0.
 
 
-hist_t, hist_u, hist_x = mpc_loop(x0, y0, [P], B, obs, cost, h, dt, 200)
+hist_t, hist_u, hist_x = mpc_loop(x0, y0, [P], B, obs, cost, h, dt, 2000)
 
 results = {
 	'dt': dt,
 	't': hist_t,
 	'u': hist_u,
 	'x': hist_x,
-	'r': R(torch.Tensor(hist_t)).numpy(),
+	'r': xR(torch.Tensor(hist_t)).numpy(),
 }
 print('Saving...')
 hkl.dump(results, 'saved/duffing_mpc.hkl')
