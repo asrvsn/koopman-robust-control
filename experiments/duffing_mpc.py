@@ -52,22 +52,6 @@ def solve_mpc(t0: float, dt: float, x0: torch.Tensor, Ps: list, B: torch.Tensor,
 
 	return u.data
 
-# def mpc_loop(x0, y0, Ps, B, obs, cost, h, dt, nmax, tapply=1):
-# 	history_t = [0]
-# 	history_u = [0]
-# 	t = 0
-# 	for i in tqdm(range(nmax), desc='MPC'):
-# 		u_opt = solve_mpc(t, dt, torch.Tensor([x0, y0]), Ps, B, obs, cost, h)[0]
-# 		for j in range(tapply):
-# 			xdot, ydot = duffing.system((x0, y0), None, alpha, beta, gamma, delta, lambda _: u_opt[j][0])
-# 			x0 += dt*xdot
-# 			y0 += dt*ydot
-# 			t += dt
-# 			history_t.append(t)
-# 			history_u.append(u_opt[j][0].item())
-# 	return np.array(history_t), np.array(history_u)
-
-
 def mpc_loop(x0, y0, Ps, B, obs, cost, h, dt, nmax, tapply=3):
 	history_t = [0]
 	history_u = [0]
@@ -102,38 +86,16 @@ cost = lambda u, x, t: ((x[0] - xR(t))**2).sum()
 h = 50
 x0, y0 = .5, 0.
 
-# # Re-simulate the system with controls 
-# hist_t, hist_u = mpc_loop(x0, y0, [P], B, obs, cost, h, dt, 1000)
-# def controller(t):
-# 	i = int(t/dt)-1
-# 	if i < len(hist_u):
-# 		return hist_u[i]
-# 	return 0
-# hist_x = odeint(duffing.system, (x0, y0), hist_t, args=(alpha, beta, gamma, delta, controller)).T
 
 hist_t, hist_u, hist_x = mpc_loop(x0, y0, [P], B, obs, cost, h, dt, 200)
 
-fig, axs = plt.subplots(1, 4)
-axs[0].plot(hist_t, hist_x[0], color='blue', label='x1')
-axs[0].plot(hist_t, xR(torch.Tensor(hist_t)), color='orange', label='reference')
-
-axs[1].plot(hist_t, hist_x[1])
-
-axs[2].plot(hist_x[0], hist_x[1])
-
-axs[3].plot(hist_t, hist_u)
-
-plt.legend()
-# hist = []
-# x, y = -1., -1.
-# for _ in range(1000):
-# 	xdot, ydot = duffing.system((x, y), None, -1., 1., 0.5, 0.3, lambda t: 0)
-# 	x += dt * xdot
-# 	y += dt * ydot
-# 	hist.append([x, y])
-# hist = np.array(hist).T
-# plt.plot(hist[0], hist[1])
-
-
-plt.show()
+results = {
+	'dt': dt,
+	't': hist_t,
+	'u': hist_u,
+	'x': hist_x,
+	'r': R(torch.Tensor(hist_t)).numpy(),
+}
+print('Saving...')
+hkl.dump(results, 'saved/duffing_mpc.hkl')
 
