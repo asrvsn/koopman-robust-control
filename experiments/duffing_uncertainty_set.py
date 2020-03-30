@@ -33,7 +33,9 @@ ic_step = 1e-5
 T = 80
 L = max(0, 2*np.log(spectral_radius(P).item()))
 
-samples, posterior = perturb(n_samples, P, beta, method='kernel', n_ics=n_ics, hmc_step=step, hmc_leapfrog=leapfrog, ic_step=ic_step, kernel_T=T, kernel_L=L)
+# samples, posterior = perturb(n_samples, P, beta, method='kernel', n_ics=n_ics, hmc_step=step, hmc_leapfrog=leapfrog, ic_step=ic_step, kernel_T=T, kernel_L=L)
+samples, posterior = perturb(n_samples, P, beta, method='euclidean', n_ics=n_ics, hmc_step=step, hmc_leapfrog=leapfrog, ic_step=ic_step)
+
 
 # Collect trajectories 
 print('Saving trajectories...')
