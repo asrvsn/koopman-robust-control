@@ -28,7 +28,7 @@ def solve_mpc(x0: torch.Tensor, P: torch.Tensor, B: torch.Tensor, obs: Observabl
 	try:
 		for _ in range(1000):
 		# while torch.abs(loss - prev_loss).item() < 1e-4:
-			x_pred = obs.extrapolate(P, x0.unsqueeze(1), h, B=B, u=u, build_graph=True, unlift_every=False)
+			x_pred = obs.extrapolate(P, x0.unsqueeze(1), h, B=B, u=u, build_graph=True)
 			# prev_loss = loss
 			loss = cost(u, x_pred)
 			print(loss.item())
@@ -44,12 +44,13 @@ def solve_mpc(x0: torch.Tensor, P: torch.Tensor, B: torch.Tensor, obs: Observabl
 	return u.data
 
 # Try it
-data = hkl.load('saved/duffing_controlled_nominal.hkl')
-P, B = torch.from_numpy(data['P']).float(), torch.from_numpy(data['B']).float()
+if __name__ == '__main__':
+	data = hkl.load('saved/duffing_controlled_nominal.hkl')
+	P, B = torch.from_numpy(data['P']).float(), torch.from_numpy(data['B']).float()
 
-x0 = torch.Tensor([-1.0, -1.0])
-xR = 0.
-cost = lambda u, x: ((x[0] - xR)**2).sum()
-h = 50
+	x0 = torch.Tensor([-1.0, -1.0])
+	xR = 0.
+	cost = lambda u, x: ((x[0] - xR)**2).sum()
+	h = 50
 
-u_opt = solve_mpc(x0, P, B, obs, cost, h)
+	u_opt = solve_mpc(x0, P, B, obs, cost, h)

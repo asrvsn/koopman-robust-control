@@ -69,15 +69,25 @@ class Observable:
 				return Y
 		# TODO: why would these have any difference?
 		else:
-			Z = torch.full((self.k, t), np.nan, device=X.device)
-			Z[:, 0] = self(X[:, 0:self.m]).view(-1)
-			z = Z[:, self.m-1].unsqueeze(1)
-			for i in range(self.m, t):
-				z = P@z
-				if u is not None:
-					z = z + B@u[:, i]
-				Z[:, i] = z.view(-1)
-			return self.preimage(Z)
+			if build_graph:
+				z_cur = self(X[:, 0:self.m], build_graph=True)
+				Z = [z_cur.view(-1)]
+				for i in range(self.m, t):
+					z_cur = P@z_cur
+					if u is not None:
+						z_cur = z_cur + B@u[:, i]
+					Z.append(z_cur.view(-1))
+				return self.preimage(torch.stack(Z, dim=1))
+			else:
+				Z = torch.full((self.k, t), np.nan, device=X.device)
+				Z[:, 0] = self(X[:, 0:self.m]).view(-1)
+				z = Z[:, self.m-1].unsqueeze(1)
+				for i in range(self.m, t):
+					z = P@z
+					if u is not None:
+						z += B@u[:, i]
+					Z[:, i] = z.view(-1)
+				return self.preimage(Z)
 
 class ComposedObservable(Observable):
 	''' Compose multiple observables (e.g. poly + delay) into a single one '''
