@@ -5,7 +5,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from tqdm import tqdm
 import matplotlib
-from scipy.integrate import odeint
+from scipy.integrate import odeint, ode
 # matplotlib.use('tkagg')
 
 from sampler.features import *
@@ -52,20 +52,42 @@ def solve_mpc(t0: float, dt: float, x0: torch.Tensor, Ps: list, B: torch.Tensor,
 
 	return u.data
 
-def mpc_loop(x0, y0, Ps, B, obs, cost, h, dt, nmax, tapply=1):
+# def mpc_loop(x0, y0, Ps, B, obs, cost, h, dt, nmax, tapply=1):
+# 	history_t = [0]
+# 	history_u = [0]
+# 	t = 0
+# 	for i in tqdm(range(nmax), desc='MPC'):
+# 		u_opt = solve_mpc(t, dt, torch.Tensor([x0, y0]), Ps, B, obs, cost, h)[0]
+# 		for j in range(tapply):
+# 			xdot, ydot = duffing.system((x0, y0), None, alpha, beta, gamma, delta, lambda _: u_opt[j][0])
+# 			x0 += dt*xdot
+# 			y0 += dt*ydot
+# 			t += dt
+# 			history_t.append(t)
+# 			history_u.append(u_opt[j][0].item())
+# 	return np.array(history_t), np.array(history_u)
+
+
+def mpc_loop(x0, y0, Ps, B, obs, cost, h, dt, nmax, tapply=3):
 	history_t = [0]
 	history_u = [0]
+	history_x = [[x0, y0]]
 	t = 0
+
+	r = ode(duffing.system_ode).set_integrator('dop853')
+	r.set_initial_value((x0, y0), 0.).set_f_params(alpha, beta, gamma, delta, lambda _: 0)
+
 	for i in tqdm(range(nmax), desc='MPC'):
 		u_opt = solve_mpc(t, dt, torch.Tensor([x0, y0]), Ps, B, obs, cost, h)[0]
 		for j in range(tapply):
-			xdot, ydot = duffing.system((x0, y0), None, alpha, beta, gamma, delta, lambda _: u_opt[j][0])
-			x0 += dt*xdot
-			y0 += dt*ydot
+			u_cur = u_opt[j][0]
+			r.set_f_params(alpha, beta, gamma, delta, lambda _: u_cur)
+			r.integrate(r.t + dt)
 			t += dt
 			history_t.append(t)
-			history_u.append(u_opt[j][0].item())
-	return np.array(history_t), np.array(history_u)
+			history_u.append(u_cur.item())
+			history_x.append(r.y)
+	return np.array(history_t), np.array(history_u), np.array(history_x).T
 
 # Try it
 data = hkl.load('saved/duffing_controlled_nominal.hkl')
@@ -74,20 +96,22 @@ dt = data['dt']
 print('Using dt:', dt)
 
 # xR = lambda t: torch.full(t.shape, 0.)
-# xR = lambda t: torch.sign(torch.cos(t*2))
-xR = lambda t: torch.floor(t/5)/5
+xR = lambda t: torch.sign(torch.cos(t/2))
+# xR = lambda t: torch.floor(t/5)/5
 cost = lambda u, x, t: ((x[0] - xR(t))**2).sum()
 h = 50
 x0, y0 = .5, 0.
 
-# Re-simulate the system with controls 
-hist_t, hist_u = mpc_loop(x0, y0, [P], B, obs, cost, h, dt, 1000)
-def controller(t):
-	i = int(t/dt)-1
-	if i < len(hist_u):
-		return hist_u[i]
-	return 0
-hist_x = odeint(duffing.system, (x0, y0), hist_t, args=(alpha, beta, gamma, delta, controller)).T
+# # Re-simulate the system with controls 
+# hist_t, hist_u = mpc_loop(x0, y0, [P], B, obs, cost, h, dt, 1000)
+# def controller(t):
+# 	i = int(t/dt)-1
+# 	if i < len(hist_u):
+# 		return hist_u[i]
+# 	return 0
+# hist_x = odeint(duffing.system, (x0, y0), hist_t, args=(alpha, beta, gamma, delta, controller)).T
+
+hist_t, hist_u, hist_x = mpc_loop(x0, y0, [P], B, obs, cost, h, dt, 200)
 
 fig, axs = plt.subplots(1, 4)
 axs[0].plot(hist_t, hist_x[0], color='blue', label='x1')
