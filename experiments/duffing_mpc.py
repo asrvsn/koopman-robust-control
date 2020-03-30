@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 from tqdm import tqdm
 import matplotlib
 from scipy.integrate import odeint
-# matplotlib.use('tkagg')
+matplotlib.use('tkagg')
 
 from sampler.features import *
 from sampler.operators import *
@@ -25,7 +25,7 @@ beta=1.0
 gamma=0.5
 delta=0.3
 
-def solve_mpc(t0: float, dt: float, x0: torch.Tensor, P: torch.Tensor, B: torch.Tensor, obs: Observable, cost: Callable, h: int, umin=-1., umax=1., eps=1e-5):
+def solve_mpc(t0: float, dt: float, x0: torch.Tensor, P: torch.Tensor, B: torch.Tensor, obs: Observable, cost: Callable, h: int, umin=-2., umax=2., eps=1e-5):
 	'''
 	h: horizon
 	'''
@@ -37,9 +37,8 @@ def solve_mpc(t0: float, dt: float, x0: torch.Tensor, P: torch.Tensor, B: torch.
 	loss, prev_loss = torch.Tensor([float('inf')]), torch.Tensor([0.])
 
 	while torch.abs(loss - prev_loss).item() > eps:
-		x_pred = obs.extrapolate(P, x0.unsqueeze(1), h, B=B, u= u, build_graph=True, unlift_every=False)
+		x_pred = obs.extrapolate(P, x0.unsqueeze(1), h, B=B, u=u.clamp(umin, umax), build_graph=True, unlift_every=True)
 		prev_loss = loss
-		# loss = cost(u.clamp(umin, umax), x_pred, window)
 		loss = cost(u, x_pred, window)
 		# print(loss.item())
 		opt.zero_grad()
@@ -72,14 +71,14 @@ P, B = torch.from_numpy(data['P']).float(), torch.from_numpy(data['B']).float()
 dt = data['dt']
 print('Using dt:', dt)
 
-# xR = lambda t: torch.full(t.shape, -0.5)
-xR = lambda t: torch.sign(torch.cos(t*0.7))
+xR = lambda t: torch.full(t.shape, 0.)
+# xR = lambda t: torch.sign(torch.cos(t*0.7))
 cost = lambda u, x, t: ((x[0] - xR(t))**2).sum()
 h = 50
 x0, y0 = 1., 1.
 
 # Re-simulate the system with controls 
-hist_t, hist_u = mpc_loop(x0, y0, P, B, obs, cost, h, dt, 50)
+hist_t, hist_u = mpc_loop(x0, y0, P, B, obs, cost, h, dt, 100)
 controller = lambda t: hist_u[int(t/dt)-1]
 hist_x = odeint(duffing.system, (x0, y0), hist_t, args=(alpha, beta, gamma, delta, controller)).T
 
@@ -87,6 +86,9 @@ plt.figure()
 plt.plot(hist_t, hist_x[0], color='blue', label='plant')
 plt.plot(hist_t, xR(torch.Tensor(hist_t)), color='orange', label='reference')
 plt.legend()
+
+plt.figure()
+plt.plot(hist_x[0], hist_x[1])
 
 plt.figure()
 plt.plot(hist_t, hist_u)
