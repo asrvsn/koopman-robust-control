@@ -26,7 +26,7 @@ obs = PolynomialObservable(p, d, k)
 # Sample dynamics
 beta = 15
 step = 1e-4
-leapfrog = 100
+leapfrog = 50
 n_samples = 2000
 n_ics = 20
 ic_step = 1e-7
