@@ -30,7 +30,7 @@ leapfrog = 200
 n_samples = 256
 n_ics = 32
 ic_step = 1e-5
-T = 100
+T = 80
 
 samples, posterior = perturb(n_samples, P, beta, method='kernel', n_ics=n_ics, hmc_step=step, hmc_leapfrog=leapfrog, ic_step=ic_step, kernel_T=T)
 
