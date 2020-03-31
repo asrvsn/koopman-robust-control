@@ -20,7 +20,7 @@ alpha=-1.0
 beta=1.0
 gamma=0.5
 delta=0.3
-noise=0.1
+noise=0.
 
 def solve_mpc(t0: float, dt: float, x0: torch.Tensor, Ps: list, B: torch.Tensor, obs: Observable, cost: Callable, h: int, umin=-1., umax=1., eps=1e-4):
 	'''
