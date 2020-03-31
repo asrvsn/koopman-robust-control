@@ -55,9 +55,9 @@ print('Running MPC...')
 Ps = random.choices(samples, k=10)
 Ps.append(P)
 
-# xR = lambda t: torch.full(t.shape, 0.)
-# xR = lambda t: torch.sign(torch.cos(t/4))
-# xR = lambda t: torch.floor(t/5)/5
+# reference = lambda t: torch.full(t.shape, 0.)
+# reference = lambda t: torch.sign(torch.cos(t/4))
+# reference = lambda t: torch.floor(t/5)/5
 
 # step cost
 def reference(t):
@@ -80,7 +80,7 @@ results = {
 	't': hist_t,
 	'u': hist_u,
 	'x': hist_x,
-	'r': xR(torch.Tensor(hist_t)).numpy(),
+	'r': reference(torch.Tensor(hist_t)).numpy(),
 }
 print('Saving...')
 hkl.dump(results, 'saved/duffing_robust_mpc.hkl')
