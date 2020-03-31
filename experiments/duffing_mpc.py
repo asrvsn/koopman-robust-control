@@ -20,6 +20,7 @@ alpha=-1.0
 beta=1.0
 gamma=0.5
 delta=0.3
+noise=0.1
 
 def solve_mpc(t0: float, dt: float, x0: torch.Tensor, Ps: list, B: torch.Tensor, obs: Observable, cost: Callable, h: int, umin=-1., umax=1., eps=1e-4):
 	'''
@@ -55,13 +56,13 @@ def mpc_loop(x0, y0, Ps, B, obs, cost, h, dt, nmax, tapply=10):
 	t = 0
 
 	r = ode(duffing.system_ode).set_integrator('dop853')
-	r.set_initial_value((x0, y0), 0.).set_f_params(alpha, beta, gamma, delta, lambda _: 0)
+	r.set_initial_value((x0, y0), 0.).set_f_params(alpha, beta, gamma, delta, lambda _: 0, noise)
 
 	for i in tqdm(range(nmax), desc='MPC'):
 		u_opt = solve_mpc(t, dt, torch.Tensor([x0, y0]), Ps, B, obs, cost, h)[0]
 		for j in range(tapply):
 			u_cur = u_opt[j][0]
-			r.set_f_params(alpha, beta, gamma, delta, lambda _: u_cur)
+			r.set_f_params(alpha, beta, gamma, delta, lambda _: u_cur, noise)
 			r.integrate(r.t + dt)
 			t += dt
 			[x0, y0] = r.y
@@ -81,16 +82,17 @@ if __name__ == '__main__':
 	dt = data['dt']
 	print('Using dt:', dt)
 
-	# xR = lambda t: torch.full(t.shape, 0.)
-	# xR = lambda t: torch.sign(torch.cos(t/4))
+	# reference = lambda t: torch.full(t.shape, 0.)
+	# reference = lambda t: torch.sign(torch.cos(t/4))
 
 	# step cost
-	lo, hi = -.8, .8
-	nstep = 5
-	xR = lambda t: torch.floor(t/nstep)*(hi-lo)/nstep + lo
+	def reference(t):
+		lo, hi = -.8, .8
+		nstep = 5
+		return torch.floor(t/nstep)*(hi-lo)/nstep + lo
 	
 	def cost(u, x, t):
-		return ((x[0] - xR(t))**2).sum()
+		return ((x[0] - reference(t))**2).sum()
 
 	h = 100
 	x0, y0 = 0., 0.
@@ -103,7 +105,7 @@ if __name__ == '__main__':
 		't': hist_t,
 		'u': hist_u,
 		'x': hist_x,
-		'r': xR(torch.Tensor(hist_t)).numpy(),
+		'r': reference(torch.Tensor(hist_t)).numpy(),
 	}
 	print('Saving...')
 	hkl.dump(results, 'saved/duffing_mpc.hkl')

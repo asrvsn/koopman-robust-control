@@ -10,10 +10,10 @@ def system(z, t, alpha, beta, gamma, delta, u):
 	return xdot, ydot
 
 # Parameters switched for scipy.ode
-def system_ode(t, z, alpha, beta, gamma, delta, u):
+def system_ode(t, z, alpha, beta, gamma, delta, u, noise):
 	[x, y] = z
 	xdot = y
-	ydot = -delta*y - alpha*x - beta*(x**3) + gamma*u(t)
+	ydot = -delta*y - alpha*x - beta*(x**3) + gamma*u(t) + noise*np.random.normal()
 	return [xdot, ydot]
 
 def dataset(tmax: int, n: int, alpha=-1.0, beta=1.0, gamma=0.5, delta=0.3, omega=1.2, x0=1.0, xdot0=0.0, u=None):
