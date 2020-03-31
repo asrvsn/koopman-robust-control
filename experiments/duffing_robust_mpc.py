@@ -52,8 +52,7 @@ obs = PolynomialObservable(p, d, k)
 
 # Robust MPC
 print('Running MPC...')
-Ps = random.choices(samples, k=10)
-Ps.append(P)
+Ps = [P] + random.choices(samples, k=15)
 
 # reference = lambda t: torch.full(t.shape, 0.)
 # reference = lambda t: torch.sign(torch.cos(t/4))
