@@ -20,7 +20,8 @@ alpha=-1.0
 beta=1.0
 gamma=0.5
 delta=0.3
-noise=0.
+proc_noise=0. # 3e-5
+obs_noise=1e-4
 
 def solve_mpc(t0: float, dt: float, x0: torch.Tensor, Ps: list, B: torch.Tensor, obs: Observable, cost: Callable, h: int, umin=-1., umax=1., eps=1e-4):
 	'''
@@ -56,13 +57,13 @@ def mpc_loop(x0, y0, Ps, B, obs, cost, h, dt, nmax, tapply=10):
 	t = 0
 
 	r = ode(duffing.system_ode).set_integrator('dop853')
-	r.set_initial_value((x0, y0), 0.).set_f_params(alpha, beta, gamma, delta, lambda _: 0, noise)
+	r.set_initial_value((x0, y0), 0.).set_f_params(alpha, beta, gamma, delta, lambda _: 0, proc_noise)
 
 	for i in tqdm(range(nmax), desc='MPC'):
-		u_opt = solve_mpc(t, dt, torch.Tensor([x0, y0]), Ps, B, obs, cost, h)[0]
+		u_opt = solve_mpc(t, dt, torch.Tensor([x0 + np.random.normal()*obs_noise, y0 + np.random.normal()*obs_noise]), Ps, B, obs, cost, h)[0]
 		for j in range(tapply):
 			u_cur = u_opt[j][0]
-			r.set_f_params(alpha, beta, gamma, delta, lambda _: u_cur, noise)
+			r.set_f_params(alpha, beta, gamma, delta, lambda _: u_cur, proc_noise)
 			r.integrate(r.t + dt)
 			t += dt
 			[x0, y0] = r.y
