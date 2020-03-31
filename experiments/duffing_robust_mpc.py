@@ -12,7 +12,7 @@ import systems.duffing as duffing
 from sampler.features import *
 from sampler.operators import *
 from sampler.kernel import *
-from experiments.duffing_mpc import mpc_loop
+from experiments.duffing_mpc import mpc_loop, reference
 from experiments.duffing_plot import plot_perturbed, plot_posterior
 
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
@@ -58,18 +58,11 @@ Ps = [P] + random.choices(samples, k=15)
 # reference = lambda t: torch.sign(torch.cos(t/4))
 # reference = lambda t: torch.floor(t/5)/5
 
-# step cost
-def reference(t):
-	lo, hi = -.8, .8
-	nstep = 3
-	tlen = 25
-	return torch.floor(t*nstep/tlen)*(hi-lo)/nstep + lo
-
 def cost(u, x, t):
 	return ((x[0] - reference(t))**2).sum()
 
 h = 100
-n = 100
+n = 200
 x0, y0 = 0., 0.
 
 
@@ -83,6 +76,6 @@ results = {
 	'r': reference(torch.Tensor(hist_t)).numpy(),
 }
 print('Saving...')
-hkl.dump(results, 'saved/duffing_robust_mpc_tmp.hkl')
+hkl.dump(results, 'saved/duffing_robust_mpc.hkl')
 
 plt.show()

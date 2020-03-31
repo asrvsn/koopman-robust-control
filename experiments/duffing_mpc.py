@@ -21,7 +21,7 @@ beta=1.0
 gamma=0.5
 delta=0.3
 proc_noise=0. # 3e-5
-obs_noise=0.2
+obs_noise=0.15
 
 def solve_mpc(t0: float, dt: float, x0: torch.Tensor, Ps: list, B: torch.Tensor, obs: Observable, cost: Callable, h: int, umin=-1., umax=1., eps=1e-4):
 	'''
@@ -50,7 +50,7 @@ def solve_mpc(t0: float, dt: float, x0: torch.Tensor, Ps: list, B: torch.Tensor,
 
 	return u.data
 
-def mpc_loop(x0, y0, Ps, B, obs, cost, h, dt, nmax, tapply=10):
+def mpc_loop(x0, y0, Ps, B, obs, cost, h, dt, nmax, tapply=5):
 	history_t = [0]
 	history_u = [0]
 	history_x = [[x0, y0]]
@@ -72,6 +72,14 @@ def mpc_loop(x0, y0, Ps, B, obs, cost, h, dt, nmax, tapply=10):
 			history_x.append(r.y)
 	return np.array(history_t), np.array(history_u), np.array(history_x).T
 
+# step cost
+def reference(t):
+	# lo, hi = -.8, .8
+	# nstep = 3
+	# tlen = 25
+	# return torch.floor(t*nstep/tlen)*(hi-lo)/nstep + lo
+	return torch.full(t.shape, -0.3)
+
 if __name__ == '__main__':
 	# Init features
 	p, d, k = 5, 2, 15
@@ -86,21 +94,15 @@ if __name__ == '__main__':
 	# reference = lambda t: torch.full(t.shape, 0.)
 	# reference = lambda t: torch.sign(torch.cos(t/4))
 
-	# step cost
-	def reference(t):
-		lo, hi = -.8, .8
-		nstep = 3
-		tlen = 25
-		return torch.floor(t*nstep/tlen)*(hi-lo)/nstep + lo
-	
 	def cost(u, x, t):
 		return ((x[0] - reference(t))**2).sum()
 
 	h = 100
+	n = 200
 	x0, y0 = 0., 0.
 
 
-	hist_t, hist_u, hist_x = mpc_loop(x0, y0, [P], B, obs, cost, h, dt, 100)
+	hist_t, hist_u, hist_x = mpc_loop(x0, y0, [P], B, obs, cost, h, dt, n)
 
 	results = {
 		'dt': dt,
