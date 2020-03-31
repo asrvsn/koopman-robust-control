@@ -21,7 +21,7 @@ beta=1.0
 gamma=0.5
 delta=0.3
 proc_noise=0. # 3e-5
-obs_noise=0.15
+obs_noise=0.05
 
 def solve_mpc(t0: float, dt: float, x0: torch.Tensor, Ps: list, B: torch.Tensor, obs: Observable, cost: Callable, h: int, umin=-1., umax=1., eps=1e-4):
 	'''
@@ -112,5 +112,5 @@ if __name__ == '__main__':
 		'r': reference(torch.Tensor(hist_t)).numpy(),
 	}
 	print('Saving...')
-	hkl.dump(results, 'saved/duffing_mpc_tmp.hkl')
+	hkl.dump(results, 'saved/duffing_mpc.hkl')
 
