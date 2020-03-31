@@ -6,6 +6,7 @@ import matplotlib.pyplot as plt
 from sampler.utils import *
 
 name = 'duffing_robust_mpc'
+# name = 'duffing_mpc'
 results = hkl.load(f'saved/{name}.hkl')
 
 t = results['t']
