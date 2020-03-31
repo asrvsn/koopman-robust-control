@@ -28,15 +28,15 @@ beta = 15
 step = 1e-5
 burn = 5
 leapfrog = 200
-n_samples = 4096
+n_samples = 512
 n_ics = 32
 ic_step = 1e-6
 ic_leapfrog = 50
 T = 80
-L = max(0, 2*np.log(spectral_radius(P).item()))
+L = 0. # max(0, 2*np.log(spectral_radius(P).item()))
 
-# samples, posterior = perturb(n_samples, P, beta, method='kernel', n_ics=n_ics, hmc_step=step, hmc_leapfrog=leapfrog, ic_step=ic_step, kernel_T=T, kernel_L=L)
-samples, posterior = perturb(n_samples, P, beta, method='euclidean', hmc_burn=burn, n_ics=n_ics, ic_leapfrog=ic_leapfrog, hmc_step=step, hmc_leapfrog=leapfrog, ic_step=ic_step)
+samples, posterior = perturb(n_samples, P, beta, method='kernel', n_ics=n_ics, hmc_step=step, hmc_burn=burn, hmc_leapfrog=leapfrog, ic_step=ic_step, ic_leapfrog=ic_leapfrog, kernel_T=T, kernel_L=L)
+# samples, posterior = perturb(n_samples, P, beta, method='euclidean', hmc_burn=burn, n_ics=n_ics, ic_leapfrog=ic_leapfrog, hmc_step=step, hmc_leapfrog=leapfrog, ic_step=ic_step)
 
 
 # Collect trajectories 
