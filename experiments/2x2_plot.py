@@ -2,6 +2,11 @@ import hickle as hkl
 import matplotlib.pyplot as plt
 import numpy as np
 
+# https://tex.stackexchange.com/questions/77968/how-do-i-avoid-type3-fonts-when-submitting-to-manuscriptcentral
+import matplotlib
+matplotlib.rcParams['pdf.fonttype'] = 42
+matplotlib.rcParams['ps.fonttype'] = 42
+
 from sampler.utils import *
 
 method1, method2 = 'baseline', 'discounted_kernel'
@@ -30,7 +35,7 @@ for i, (key, name) in enumerate(plots.items()):
 	# Original phase portrait
 	A = results1[key]['nominal']
 	plot_flow_field(axs[0,i], lambda x: A@x, (-4,4), (-4,4))
-	axs[0,i].set_title(name)
+	# axs[0,i].set_title(name)
 	axs[0,i].axis('off')
 
 	# # Posterior distribution

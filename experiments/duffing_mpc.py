@@ -13,7 +13,7 @@ from sampler.operators import *
 import systems.duffing as duffing
 
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
-set_seed(9001)
+set_seed(1000)
 # torch.autograd.set_detect_anomaly(True)
 
 alpha=-1.0
@@ -21,7 +21,7 @@ beta=1.0
 gamma=0.5
 delta=0.3
 proc_noise=0. # 3e-5
-obs_noise=0.05
+obs_noise=0.02
 
 def solve_mpc(t0: float, dt: float, x0: torch.Tensor, Ps: list, B: torch.Tensor, obs: Observable, cost: Callable, h: int, umin=-1., umax=1., eps=1e-4):
 	'''
@@ -78,7 +78,12 @@ def reference(t):
 	# nstep = 3
 	# tlen = 25
 	# return torch.floor(t*nstep/tlen)*(hi-lo)/nstep + lo
-	return torch.full(t.shape, -0.3)
+	return torch.full(t.shape, 0.)
+
+
+def cost(u, x, t):
+	return ((x[0] - reference(t))**2).sum()
+
 
 if __name__ == '__main__':
 	# Init features
@@ -94,12 +99,9 @@ if __name__ == '__main__':
 	# reference = lambda t: torch.full(t.shape, 0.)
 	# reference = lambda t: torch.sign(torch.cos(t/4))
 
-	def cost(u, x, t):
-		return ((x[0] - reference(t))**2).sum()
-
 	h = 100
 	n = 200
-	x0, y0 = 0., 0.
+	x0, y0 = -.5., -.5.
 
 
 	hist_t, hist_u, hist_x = mpc_loop(x0, y0, [P], B, obs, cost, h, dt, n)

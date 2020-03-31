@@ -12,11 +12,11 @@ import systems.duffing as duffing
 from sampler.features import *
 from sampler.operators import *
 from sampler.kernel import *
-from experiments.duffing_mpc import mpc_loop, reference
+from experiments.duffing_mpc import mpc_loop, reference, cost
 from experiments.duffing_plot import plot_perturbed, plot_posterior
 
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
-set_seed(9001)
+set_seed(1000)
 # torch.autograd.set_detect_anomaly(True)
 
 # Select models
@@ -52,14 +52,11 @@ obs = PolynomialObservable(p, d, k)
 
 # Robust MPC
 print('Running MPC...')
-Ps = [P] + random.choices(samples, k=15)
+Ps = [P] + random.choices(samples, k=17)
 
 # reference = lambda t: torch.full(t.shape, 0.)
 # reference = lambda t: torch.sign(torch.cos(t/4))
 # reference = lambda t: torch.floor(t/5)/5
-
-def cost(u, x, t):
-	return ((x[0] - reference(t))**2).sum()
 
 h = 100
 n = 200
