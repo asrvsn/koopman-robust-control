@@ -21,7 +21,7 @@ beta=1.0
 gamma=0.5
 delta=0.3
 
-def solve_mpc(t0: float, dt: float, x0: torch.Tensor, Ps: list, B: torch.Tensor, obs: Observable, cost: Callable, h: int, umin=-2., umax=2., eps=1e-5):
+def solve_mpc(t0: float, dt: float, x0: torch.Tensor, Ps: list, B: torch.Tensor, obs: Observable, cost: Callable, h: int, umin=-2., umax=2., eps=1e-4):
 	'''
 	h: horizon
 	Ps: list of models (if > 1, this does robust MPC)
@@ -81,14 +81,19 @@ if __name__ == '__main__':
 	print('Using dt:', dt)
 
 	# xR = lambda t: torch.full(t.shape, 0.)
-	xR = lambda t: torch.sign(torch.cos(t/4))
-	# xR = lambda t: torch.floor(t/5)/5
+	# xR = lambda t: torch.sign(torch.cos(t/4))
+
+	# step cost
+	lo, hi = -.8, .8
+	nstep = 5
+	xR = lambda t: torch.floor(t/nstep)*(hi-lo)/nstep + lo
+	
 	cost = lambda u, x, t: ((x[0] - xR(t))**2).sum()
 	h = 50
 	x0, y0 = .5, 0.
 
 
-	hist_t, hist_u, hist_x = mpc_loop(x0, y0, [P], B, obs, cost, h, dt, 2000)
+	hist_t, hist_u, hist_x = mpc_loop(x0, y0, [P], B, obs, cost, h, dt, 1000)
 
 	results = {
 		'dt': dt,

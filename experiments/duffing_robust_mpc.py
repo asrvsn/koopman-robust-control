@@ -52,7 +52,8 @@ obs = PolynomialObservable(p, d, k)
 
 # Robust MPC
 print('Running MPC...')
-Ps = random.choices(samples, k=20)
+Ps = random.choices(samples, k=10)
+Ps.append(P)
 # xR = lambda t: torch.full(t.shape, 0.)
 xR = lambda t: torch.sign(torch.cos(t/4))
 # xR = lambda t: torch.floor(t/5)/5
@@ -61,7 +62,7 @@ h = 50
 x0, y0 = .5, 0.
 
 
-hist_t, hist_u, hist_x = mpc_loop(x0, y0, Ps, B, obs, cost, h, dt, 2000)
+hist_t, hist_u, hist_x = mpc_loop(x0, y0, Ps, B, obs, cost, h, dt, 1000)
 
 results = {
 	'dt': dt,
