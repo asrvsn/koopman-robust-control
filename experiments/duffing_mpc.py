@@ -16,10 +16,6 @@ device = 'cuda' if torch.cuda.is_available() else 'cpu'
 set_seed(9001)
 # torch.autograd.set_detect_anomaly(True)
 
-# Init features
-p, d, k = 5, 2, 15
-obs = PolynomialObservable(p, d, k)
-
 alpha=-1.0
 beta=1.0
 gamma=0.5
@@ -73,29 +69,34 @@ def mpc_loop(x0, y0, Ps, B, obs, cost, h, dt, nmax, tapply=1):
 			history_x.append(r.y)
 	return np.array(history_t), np.array(history_u), np.array(history_x).T
 
-# Try it
-data = hkl.load('saved/duffing_controlled_nominal.hkl')
-P, B = torch.from_numpy(data['P']).float(), torch.from_numpy(data['B']).float()
-dt = data['dt']
-print('Using dt:', dt)
+if __name__ == '__main__':
+	# Init features
+	p, d, k = 5, 2, 15
+	obs = PolynomialObservable(p, d, k)
 
-# xR = lambda t: torch.full(t.shape, 0.)
-xR = lambda t: torch.sign(torch.cos(t/4))
-# xR = lambda t: torch.floor(t/5)/5
-cost = lambda u, x, t: ((x[0] - xR(t))**2).sum()
-h = 50
-x0, y0 = .5, 0.
+	# Try it
+	data = hkl.load('saved/duffing_controlled_nominal.hkl')
+	P, B = torch.from_numpy(data['P']).float(), torch.from_numpy(data['B']).float()
+	dt = data['dt']
+	print('Using dt:', dt)
+
+	# xR = lambda t: torch.full(t.shape, 0.)
+	xR = lambda t: torch.sign(torch.cos(t/4))
+	# xR = lambda t: torch.floor(t/5)/5
+	cost = lambda u, x, t: ((x[0] - xR(t))**2).sum()
+	h = 50
+	x0, y0 = .5, 0.
 
 
-hist_t, hist_u, hist_x = mpc_loop(x0, y0, [P], B, obs, cost, h, dt, 2000)
+	hist_t, hist_u, hist_x = mpc_loop(x0, y0, [P], B, obs, cost, h, dt, 2000)
 
-results = {
-	'dt': dt,
-	't': hist_t,
-	'u': hist_u,
-	'x': hist_x,
-	'r': xR(torch.Tensor(hist_t)).numpy(),
-}
-print('Saving...')
-hkl.dump(results, 'saved/duffing_mpc.hkl')
+	results = {
+		'dt': dt,
+		't': hist_t,
+		'u': hist_u,
+		'x': hist_x,
+		'r': xR(torch.Tensor(hist_t)).numpy(),
+	}
+	print('Saving...')
+	hkl.dump(results, 'saved/duffing_mpc.hkl')
 

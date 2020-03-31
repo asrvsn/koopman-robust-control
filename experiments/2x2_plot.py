@@ -23,7 +23,7 @@ plots = {
 	# 'defective_sink', 
 }
 
-fig, axs = plt.subplots(5, len(plots))
+fig, axs = plt.subplots(3, len(plots))
 
 for i, (key, name) in enumerate(plots.items()):
 
@@ -33,18 +33,18 @@ for i, (key, name) in enumerate(plots.items()):
 	axs[0,i].set_title(name)
 	axs[0,i].axis('off')
 
-	# Posterior distribution
-	posterior = results1[key]['posterior']
-	axs[1,i].hist(posterior, density=True, bins=max(1, int(len(posterior)/4))) 
-	axs[1,i].axes.get_yaxis().set_visible(False)
+	# # Posterior distribution
+	# posterior = results1[key]['posterior']
+	# axs[1,i].hist(posterior, density=True, bins=max(1, int(len(posterior)/4))) 
+	# axs[1,i].axes.get_yaxis().set_visible(False)
 
 	# Trace-determinant plot
 	samples = results1[key]['samples']
 	tr = [np.trace(S) for S in samples]
 	det = [np.linalg.det(S) for S in samples]
-	axs[2,i].scatter(tr, det, color='blue', marker='+', alpha=0.5)
-	plot_trace_determinant(axs[2,i], A, (-4,4), (-4,4))
-	axs[2,i].axes.get_yaxis().set_visible(False)
+	axs[1,i].scatter(tr, det, color='blue', marker='+', alpha=0.5)
+	plot_trace_determinant(axs[1,i], A, (-4,4), (-4,4))
+	axs[1,i].axes.get_yaxis().set_visible(False)
 	# axs[2,i].axes.get_xaxis().set_visible(False)
 
 	# # Spectral radii
@@ -55,18 +55,18 @@ for i, (key, name) in enumerate(plots.items()):
 	# axs[3,i].axes.get_yaxis().set_visible(False)
 	# axs[3,i].set_aspect(0.2)
 
-	# Posterior distribution
-	posterior = results2[key]['posterior']
-	axs[3,i].hist(posterior, density=True, bins=max(1, int(len(posterior)/4))) 
-	axs[3,i].axes.get_yaxis().set_visible(False)
+	# # Posterior distribution
+	# posterior = results2[key]['posterior']
+	# axs[3,i].hist(posterior, density=True, bins=max(1, int(len(posterior)/4))) 
+	# axs[3,i].axes.get_yaxis().set_visible(False)
 
 	# Trace-determinant plot
 	samples = results2[key]['samples']
 	tr = [np.trace(S) for S in samples]
 	det = [np.linalg.det(S) for S in samples]
-	axs[4,i].scatter(tr, det, color='blue', marker='+', alpha=0.5)
-	plot_trace_determinant(axs[4,i], A, (-4,4), (-4,4))
-	axs[4,i].axes.get_yaxis().set_visible(False)
+	axs[2,i].scatter(tr, det, color='blue', marker='+', alpha=0.5)
+	plot_trace_determinant(axs[2,i], A, (-4,4), (-4,4))
+	axs[2,i].axes.get_yaxis().set_visible(False)
 	# axs[4,i].axes.get_xaxis().set_visible(False)
 
 	# # Spectral radii
