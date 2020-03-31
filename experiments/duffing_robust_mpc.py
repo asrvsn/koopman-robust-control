@@ -61,8 +61,9 @@ Ps = [P] + random.choices(samples, k=15)
 # step cost
 def reference(t):
 	lo, hi = -.8, .8
-	nstep = 5
-	return torch.floor(t/nstep)*(hi-lo)/nstep + lo
+	nstep = 3
+	tlen = 25
+	return torch.floor(t*nstep/tlen)*(hi-lo)/nstep + lo
 
 def cost(u, x, t):
 	return ((x[0] - reference(t))**2).sum()
