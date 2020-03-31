@@ -54,15 +54,26 @@ obs = PolynomialObservable(p, d, k)
 print('Running MPC...')
 Ps = random.choices(samples, k=10)
 Ps.append(P)
+
 # xR = lambda t: torch.full(t.shape, 0.)
-xR = lambda t: torch.sign(torch.cos(t/4))
+# xR = lambda t: torch.sign(torch.cos(t/4))
 # xR = lambda t: torch.floor(t/5)/5
-cost = lambda u, x, t: ((x[0] - xR(t))**2).sum()
-h = 50
-x0, y0 = .5, 0.
+
+# step cost
+def reference(t):
+	lo, hi = -.8, .8
+	nstep = 5
+	return torch.floor(t/nstep)*(hi-lo)/nstep + lo
+
+def cost(u, x, t):
+	return ((x[0] - reference(t))**2).sum()
+
+h = 100
+n = 100
+x0, y0 = 0., 0.
 
 
-hist_t, hist_u, hist_x = mpc_loop(x0, y0, Ps, B, obs, cost, h, dt, 1000)
+hist_t, hist_u, hist_x = mpc_loop(x0, y0, Ps, B, obs, cost, h, dt, n)
 
 results = {
 	'dt': dt,
