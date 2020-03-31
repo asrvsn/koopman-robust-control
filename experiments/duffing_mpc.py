@@ -64,6 +64,7 @@ def mpc_loop(x0, y0, Ps, B, obs, cost, h, dt, nmax, tapply=10):
 			r.set_f_params(alpha, beta, gamma, delta, lambda _: u_cur)
 			r.integrate(r.t + dt)
 			t += dt
+			[x0, y0] = r.y
 			history_t.append(t)
 			history_u.append(u_cur.item())
 			history_x.append(r.y)
@@ -88,8 +89,10 @@ if __name__ == '__main__':
 	nstep = 5
 	xR = lambda t: torch.floor(t/nstep)*(hi-lo)/nstep + lo
 	
-	cost = lambda u, x, t: ((x[0] - xR(t))**2).sum()
-	h = 50
+	def cost(u, x, t):
+		return ((x[0] - xR(t))**2).sum()
+
+	h = 100
 	x0, y0 = 0., 0.
 
 
