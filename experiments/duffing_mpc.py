@@ -21,7 +21,11 @@ beta=1.0
 gamma=0.5
 delta=0.3
 proc_noise=0. # 3e-5
-obs_noise=0.02
+obs_noise=0. # 0.1
+d_damp=-0.3
+d_restore=0. 
+d_stiff=0.1
+struct_uncertainty = lambda t: 0.
 
 def solve_mpc(t0: float, dt: float, x0: torch.Tensor, Ps: list, B: torch.Tensor, obs: Observable, cost: Callable, h: int, umin=-1., umax=1., eps=1e-4):
 	'''
@@ -30,7 +34,7 @@ def solve_mpc(t0: float, dt: float, x0: torch.Tensor, Ps: list, B: torch.Tensor,
 	'''
 	u = torch.full((1, h), 0).unsqueeze(2) 
 	u = torch.nn.Parameter(u)
-	opt = torch.optim.SGD([u], lr=0.1, momentum=0.9)
+	opt = torch.optim.SGD([u], lr=0.1, momentum=0.98)
 
 	window = torch.Tensor([t0 + dt*i for i in range(h)])
 	loss, prev_loss = torch.Tensor([float('inf')]), torch.Tensor([0.])
@@ -57,13 +61,13 @@ def mpc_loop(x0, y0, Ps, B, obs, cost, h, dt, nmax, tapply=5):
 	t = 0
 
 	r = ode(duffing.system_ode).set_integrator('dop853')
-	r.set_initial_value((x0, y0), 0.).set_f_params(alpha, beta, gamma, delta, lambda _: 0, proc_noise)
+	r.set_initial_value((x0, y0), 0.).set_f_params(alpha+d_stiff, beta+d_restore, gamma, delta+d_damp, lambda t: struct_uncertainty(t), proc_noise)
 
 	for i in tqdm(range(nmax), desc='MPC'):
 		u_opt = solve_mpc(t, dt, torch.Tensor([x0 + np.random.normal()*obs_noise, y0 + np.random.normal()*obs_noise]), Ps, B, obs, cost, h)[0]
 		for j in range(tapply):
 			u_cur = u_opt[j][0]
-			r.set_f_params(alpha, beta, gamma, delta, lambda _: u_cur, proc_noise)
+			r.set_f_params(alpha+d_stiff, beta+d_restore, gamma, delta+d_damp, lambda t: u_cur + struct_uncertainty(t), proc_noise)
 			r.integrate(r.t + dt)
 			t += dt
 			[x0, y0] = r.y
@@ -74,11 +78,11 @@ def mpc_loop(x0, y0, Ps, B, obs, cost, h, dt, nmax, tapply=5):
 
 # step cost
 def reference(t):
-	# lo, hi = -.8, .8
-	# nstep = 3
-	# tlen = 25
-	# return torch.floor(t*nstep/tlen)*(hi-lo)/nstep + lo
-	return torch.full(t.shape, 0.)
+	lo, hi = -.8, .8
+	nstep = 4
+	tlen = 25+1
+	return torch.floor(t*nstep/tlen)*(hi-lo)/nstep + lo
+	# return torch.full(t.shape, 0.)
 
 
 def cost(u, x, t):
@@ -101,7 +105,7 @@ if __name__ == '__main__':
 
 	h = 100
 	n = 200
-	x0, y0 = -.5, -.5
+	x0, y0 = -.5, -.25
 
 
 	hist_t, hist_u, hist_x = mpc_loop(x0, y0, [P], B, obs, cost, h, dt, n)
