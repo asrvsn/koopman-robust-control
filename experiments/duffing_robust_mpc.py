@@ -60,7 +60,7 @@ Ps = [P] + random.choices(samples, k=17)
 
 h = 100
 n = 200
-x0, y0 = -.5, -.5.
+x0, y0 = -.5, -.5
 
 
 hist_t, hist_u, hist_x = mpc_loop(x0, y0, Ps, B, obs, cost, h, dt, n)
