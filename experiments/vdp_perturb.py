@@ -43,7 +43,7 @@ step = 5e-5
 leapfrog = 200
 n_samples = 2000
 n_ics = 100
-ic_step = 1e-6
+ic_step = 0
 T = 80
 L = 0.1
 
