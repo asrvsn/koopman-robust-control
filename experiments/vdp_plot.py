@@ -10,8 +10,8 @@ from sampler.utils import *
 from sampler.features import *
 from experiments.duffing_plot import plot_one, plot_perturbed, plot_posterior
 
-method = 'kernel'
-results = hkl.load(f'saved/duffing_{method}.hkl')
+method = 'baseline'
+results = hkl.load(f'saved/vdp_{method}.hkl')
 nominal = torch.from_numpy(results['nominal']).float()
 posterior = results['posterior']
 samples = [torch.from_numpy(s).float() for s in results['samples']]
