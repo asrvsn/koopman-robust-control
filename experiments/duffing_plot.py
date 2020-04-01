@@ -26,13 +26,12 @@ def plot_one(trajectory):
 	for tr in trajectory:
 		plt.plot(tr[0], tr[1], color=get_color(tr[:,-1]))
 
-def plot_perturbed(trajectories, n_y, n_x):
+def plot_perturbed(trajectories, n_y, n_x, xbound=2.2, ybound=2.2):
 	fig, axs = plt.subplots(n_y, n_x)
 	# fig.suptitle(f'Perturbations of Duffing oscillator ({method})')
 	r, c = 0, 0
 	for perturbed in trajectories:
 		ax = axs[r, c]
-		xbound, ybound = 2.2, 2.2
 		ax.set_xlim(left=-xbound, right=xbound)
 		ax.set_ylim(bottom=-ybound, top=ybound)
 		ax.axis('off')

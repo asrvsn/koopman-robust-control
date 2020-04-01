@@ -33,10 +33,10 @@ assert not torch.isnan(nominal).any().item()
 
 # Sample dynamics
 
-# method = 'baseline'
+method = 'baseline'
 # method = 'kernel'
 # method = 'constrained_kernel'
-method = 'discounted_kernel'
+# method = 'discounted_kernel'
 
 beta = 5
 step = 1e-5
@@ -56,11 +56,11 @@ elif method == 'constrained_kernel':
 elif method == 'discounted_kernel':
 	samples, posterior = perturb(n_samples, nominal, beta, method='kernel', n_ics=n_ics, hmc_step=step, hmc_leapfrog=leapfrog, ic_step=ic_step, kernel_T=T, kernel_L=L)
 
-print('Saving trajectories...')
-n_trajectories = 12
-n_ics = 12
-t = 3000
-trajectories = [sample_2d_dynamics(P, obs, t, (-6,6), (-6,6), n_ics, n_ics) for P in random.choices(samples, k=n_trajectories)]
+# print('Saving trajectories...')
+# n_trajectories = 12
+# n_ics = 12
+# t = 3000
+# trajectories = [sample_2d_dynamics(P, obs, t, (-6,6), (-6,6), n_ics, n_ics) for P in random.choices(samples, k=n_trajectories)]
 
 results = {
 	'method': method,
@@ -69,7 +69,7 @@ results = {
 	'nominal': nominal.numpy(),
 	'posterior': posterior,
 	'samples': [s.numpy() for s in samples],
-	'trajectories': trajectories,
+	# 'trajectories': trajectories,
 }
 print('Saving..')
 hkl.dump(results, f'saved/vdp_{method}.hkl')

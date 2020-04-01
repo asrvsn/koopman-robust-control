@@ -22,10 +22,10 @@ gamma=0.5
 delta=0.3
 proc_noise=0. # 3e-5
 obs_noise=0. # 0.1
-d_damp=-0.4
-d_restore=0. 
+d_damp=-0.
+d_restore=0.6
 d_stiff=0.
-struct_uncertainty = lambda t: 0.1
+struct_uncertainty = lambda t: 0.
 
 def solve_mpc(t0: float, dt: float, x0: torch.Tensor, Ps: list, B: torch.Tensor, obs: Observable, cost: Callable, h: int, umin=-1., umax=1., eps=1e-4):
 	'''
@@ -34,7 +34,7 @@ def solve_mpc(t0: float, dt: float, x0: torch.Tensor, Ps: list, B: torch.Tensor,
 	'''
 	u = torch.full((1, h), 0).unsqueeze(2) 
 	u = torch.nn.Parameter(u)
-	opt = torch.optim.SGD([u], lr=0.15, momentum=0.9)
+	opt = torch.optim.SGD([u], lr=0.1, momentum=0.98)
 
 	window = torch.Tensor([t0 + dt*i for i in range(h)])
 	loss, prev_loss = torch.Tensor([float('inf')]), torch.Tensor([0.])
@@ -105,7 +105,7 @@ if __name__ == '__main__':
 
 	h = 100
 	n = 200
-	x0, y0 = -.5, -.25
+	x0, y0 = -.5, 0.
 
 
 	hist_t, hist_u, hist_x = mpc_loop(x0, y0, [P], B, obs, cost, h, dt, n)
