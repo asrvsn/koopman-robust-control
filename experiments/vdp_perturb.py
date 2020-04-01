@@ -39,7 +39,7 @@ method = 'baseline'
 # method = 'discounted_kernel'
 
 beta = 5
-step = 1e-5
+step = 5e-5
 leapfrog = 200
 n_samples = 2000
 n_ics = 200
