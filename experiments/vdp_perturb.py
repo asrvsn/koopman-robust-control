@@ -42,8 +42,8 @@ beta = 5
 step = 5e-5
 leapfrog = 200
 n_samples = 2000
-n_ics = 200
-ic_step = 1e-5
+n_ics = 100
+ic_step = 5e-6
 T = 80
 L = 0.1
 
