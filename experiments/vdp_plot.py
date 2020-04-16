@@ -8,18 +8,19 @@ import hickle as hkl
 
 from sampler.utils import *
 from sampler.features import *
+from sampler.operators import *
 from experiments.duffing_plot import plot_one, plot_perturbed, plot_posterior
 
-method = 'baseline'
+method = 'kernel'
 results = hkl.load(f'saved/vdp_{method}.hkl')
 nominal = torch.from_numpy(results['nominal']).float()
 posterior = results['posterior']
 samples = [torch.from_numpy(s).float() for s in results['samples']]
 step = results['step']
 beta = results['beta']
-# trajectories = results['trajectories']
+trajectories = results['trajectories']
 
-# plot_perturbed(trajectories, 3, 4, xbound=6.4, ybound=6.4)
+plot_perturbed(trajectories, 3, 4, xbound=6.4, ybound=6.4)
 plot_posterior(posterior, beta)
 
 # # Show nominal

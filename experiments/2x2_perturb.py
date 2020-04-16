@@ -5,7 +5,7 @@ import hickle as hkl
 import sampler.reflections as reflections
 from sampler.utils import *
 from sampler.kernel import *
-from sampler.dynamics import *
+from sampler.ugen import *
 import systems.lti2x2 as lti2x2
 
 set_seed(9001)

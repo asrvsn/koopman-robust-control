@@ -5,7 +5,7 @@ from sampler.features import *
 from sampler.kernel import *
 from sampler.operators import *
 from sampler.utils import *
-from sampler.dynamics import perturb
+from sampler.ugen import perturb
 import systems.vdp as vdp
 
 device = 'cuda' if torch.cuda.is_available() else 'cpu'

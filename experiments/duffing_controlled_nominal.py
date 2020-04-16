@@ -8,7 +8,7 @@ from sampler.features import *
 from sampler.kernel import *
 from sampler.operators import *
 from sampler.utils import *
-from sampler.dynamics import *
+from sampler.ugen import *
 import systems.duffing as duffing
 
 device = 'cuda' if torch.cuda.is_available() else 'cpu'

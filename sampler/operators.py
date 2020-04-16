@@ -6,7 +6,6 @@ import numpy as np
 import matplotlib.pyplot as plt
 import multiprocessing
 import traceback
-from functools import partial
 from tqdm import tqdm
 
 from sampler.features import *
