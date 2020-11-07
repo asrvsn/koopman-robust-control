@@ -1,6 +1,7 @@
 from typing import Callable, Any
 from itertools import repeat
 import multiprocessing
+import cloudpickle
 from tqdm import tqdm
 import traceback
 import torch
@@ -8,24 +9,20 @@ import torch
 from sampler.utils import *
 import sampler.hmc as hmc
 
-# https://github.com/pytorch/pytorch/issues/973
-torch.multiprocessing.set_sharing_strategy('file_system')
-
-# Multiprocessing cannot pickle lambdas
-_implicit_potential = None
-_implicit_boundary = None
-
 def worker(
-		n_samples: int, init_params: tuple, 
+		n_samples: int, ic: tuple, 
+		potential: Any, boundary: Any,
 		step_size: float, n_leapfrog: int, n_burn: int, random_step: bool, debug: bool, return_first: bool,
 		seed: Any
 	):	
 	try:
+		potential, boundary = cloudpickle.loads(potential), cloudpickle.loads(boundary)
 		if seed is not None:
 			set_seed(seed)
-		samples, ratio = hmc.sample(n_samples, init_params, _implicit_potential, _implicit_boundary, step_size=step_size, n_leapfrog=n_leapfrog, n_burn=n_burn, random_step=random_step, debug=debug, return_first=return_first, show_progress=False)
+		samples, ratio = hmc.sample(n_samples, ic, potential, boundary, step_size=step_size, n_leapfrog=n_leapfrog, n_burn=n_burn, random_step=random_step, debug=debug, return_first=return_first, show_progress=False)
 		return samples
 	except:
+		print('Worker errored!')
 		print(traceback.format_exc())
 		return []
 
@@ -34,10 +31,7 @@ def sample(
 		step_size=0.03, n_leapfrog=10, n_burn=10, random_step=False, debug=False, return_first=False, 
 		deterministic=True
 	):
-
-	global _implicit_potential, _implicit_boundary
-	_implicit_potential = potential
-	_implicit_boundary = boundary
+	potential, boundary = cloudpickle.dumps(potential), cloudpickle.dumps(boundary)
 
 	samples = []
 	with tqdm(total=n_samples*len(initial_conditions), desc='Parallel HMC') as pbar:
@@ -50,7 +44,7 @@ def sample(
 			for i, ic in enumerate(initial_conditions):
 				seed = 1000+i if deterministic else None
 				pool.apply_async(worker, args=(
-					n_samples, ic, step_size, n_leapfrog, n_burn, random_step, debug, return_first, seed
+					n_samples, ic, potential, boundary, step_size, n_leapfrog, n_burn, random_step, debug, return_first, seed
 				), callback=add_samples)
 			pool.close()
 			pool.join()

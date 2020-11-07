@@ -11,23 +11,41 @@ from sampler.features import *
 from sampler.operators import *
 from experiments.duffing_plot import plot_one, plot_perturbed, plot_posterior
 
-method = 'kernel'
+set_seed(9001)
+
+method = 'baseline'
 results = hkl.load(f'saved/vdp_{method}.hkl')
 nominal = torch.from_numpy(results['nominal']).float()
 posterior = results['posterior']
 samples = [torch.from_numpy(s).float() for s in results['samples']]
 step = results['step']
 beta = results['beta']
-trajectories = results['trajectories']
+# trajectories = results['trajectories']
 
-plot_perturbed(trajectories, 3, 4, xbound=6.4, ybound=6.4)
+print(f'Method: {method}, Beta: {beta}, Step: {step}')
+
 plot_posterior(posterior, beta)
 
-# # Show nominal
-# p, d, k = 4, 2, 8
-# obs = PolynomialObservable(p, d, k)
-# n_ics = 12
-# t = 3000
-# plot_one(sample_2d_dynamics(nominal, obs, t, (-2,2), (-2,2), n_ics, n_ics))
+def extrapolate(K):
+	init = torch.Tensor([[1.], [0.]])
+	Z = obs.extrapolate(K, init, 3000)
+	return Z.numpy()
+
+plt.figure()
+p, d, k = 4, 2, 8
+obs = PolynomialObservable(p, d, k)
+tr = extrapolate(nominal)
+plt.plot(tr[0], tr[1], color='blue')
+
+for K in random.choices(samples, k=20):
+	tr = extrapolate(K)
+	plt.plot(tr[0], tr[1], color='black', alpha=0.3)
+
+plt.scatter([1], [0], color='blue')
+
+plt.xlim(-4, 4)
+plt.ylim(-6, 6)
+plt.axis('off')
+plt.tight_layout()
 
 plt.show()
